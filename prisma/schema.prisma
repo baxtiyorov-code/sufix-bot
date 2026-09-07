@@ -1,0 +1,39 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Scan {
+  id         Int      @id @default(autoincrement())
+  fileName   String
+  fileType   String
+  fileHash   String
+  fileSizeMb Float
+  malicious  Int
+  suspicious Int
+  harmless   Int
+  undetected Int
+  verdict    String // "clean" | "suspicious" | "malicious"
+  userId     BigInt
+  username   String?
+  chatId     BigInt
+  permalink  String
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([fileHash])
+}
+
+model UserSettings {
+  userId        BigInt   @id
+  username      String?
+  language      String   @default("ru") // "ru" | "en" | "uz"
+  firstSeenAt   DateTime @default(now())
+  paidTokens    Int      @default(0)
+  freeScansUsed Int      @default(0)
+  freeScansDate String   @default("")
+}
