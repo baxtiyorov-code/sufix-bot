@@ -191,8 +191,10 @@ const ru: Translations = {
     `Язык: <b>${language}</b>\n` +
     `С нами с: <b>${memberSince}</b>\n\n` +
     "💳 <b>Баланс</b>\n" +
-    `Бесплатные сегодня: <b>${freeRemaining}/${dailyLimit}</b>   ·   ⏳ сброс через <b>${resetIn}</b>\n` +
-    `Токены: <b>${paidTokens}</b>\n\n` +
+    (isAdmin
+      ? "♾ <b>Безлимит</b> — проверки без ограничений\n\n"
+      : `Бесплатные сегодня: <b>${freeRemaining}/${dailyLimit}</b>   ·   ⏳ сброс через <b>${resetIn}</b>\n` +
+        `Токены: <b>${paidTokens}</b>\n\n`) +
     "📊 <b>Проверки</b>\n" +
     `Всего: <b>${total}</b>\n` +
     `🟢 ${clean}   ·   🟡 ${suspicious}   ·   🔴 ${malicious}`,
@@ -333,8 +335,10 @@ const en: Translations = {
     `Language: <b>${language}</b>\n` +
     `Member since: <b>${memberSince}</b>\n\n` +
     "💳 <b>Balance</b>\n" +
-    `Free today: <b>${freeRemaining}/${dailyLimit}</b>   ·   ⏳ resets in <b>${resetIn}</b>\n` +
-    `Tokens: <b>${paidTokens}</b>\n\n` +
+    (isAdmin
+      ? "♾ <b>Unlimited</b> — no scan limits\n\n"
+      : `Free today: <b>${freeRemaining}/${dailyLimit}</b>   ·   ⏳ resets in <b>${resetIn}</b>\n` +
+        `Tokens: <b>${paidTokens}</b>\n\n`) +
     "📊 <b>Scans</b>\n" +
     `Total: <b>${total}</b>\n` +
     `🟢 ${clean}   ·   🟡 ${suspicious}   ·   🔴 ${malicious}`,
@@ -475,8 +479,10 @@ const uz: Translations = {
     `Til: <b>${language}</b>\n` +
     `Bizda: <b>${memberSince}</b> dan beri\n\n` +
     "💳 <b>Balans</b>\n" +
-    `Bugun bepul: <b>${freeRemaining}/${dailyLimit}</b>   ·   ⏳ yangilanish <b>${resetIn}</b>\n` +
-    `Tokenlar: <b>${paidTokens}</b>\n\n` +
+    (isAdmin
+      ? "♾ <b>Cheksiz</b> — tekshiruvlar cheklovsiz\n\n"
+      : `Bugun bepul: <b>${freeRemaining}/${dailyLimit}</b>   ·   ⏳ yangilanish <b>${resetIn}</b>\n` +
+        `Tokenlar: <b>${paidTokens}</b>\n\n`) +
     "📊 <b>Tekshiruvlar</b>\n" +
     `Jami: <b>${total}</b>\n` +
     `🟢 ${clean}   ·   🟡 ${suspicious}   ·   🔴 ${malicious}`,

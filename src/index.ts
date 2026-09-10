@@ -5,10 +5,10 @@ import { scanFile, getReportByHash, sha256 } from "./virustotal";
 import { prisma } from "./db";
 import { t, Lang, BRAND, LANGUAGE_NAMES, isValidLang } from "./i18n";
 import { consumeToken, addPaidTokens, getBalance, timeUntilReset, FREE_DAILY_LIMIT, TOKEN_PACKAGES } from "./tokens";
+import { isAdmin } from "./admins";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY;
-const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 
 if (!BOT_TOKEN || !VT_API_KEY) {
   console.error("Не заданы BOT_TOKEN или VIRUSTOTAL_API_KEY в .env файле.");
@@ -25,10 +25,6 @@ const HTML = { parse_mode: "HTML" } as const;
 /** Экранирует спецсимволы HTML, чтобы имя файла не ломало разметку сообщения. */
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function isAdmin(userId: number | undefined): boolean {
-  return !!ADMIN_CHAT_ID && String(userId) === ADMIN_CHAT_ID;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -171,7 +167,7 @@ async function profileScreen(from: NonNullable<Context["from"]>, lang: Lang): Pr
     clean,
     suspicious,
     malicious,
-    isAdmin: isAdmin(from.id),
+    isAdmin: isAdmin(from.id, from.username),
     freeRemaining: balance.freeRemaining,
     dailyLimit: FREE_DAILY_LIMIT,
     paidTokens: balance.paidTokens,
@@ -276,7 +272,7 @@ bot.command("history", async (ctx) => {
 bot.command("stats", async (ctx) => {
   const lang = await getUserLang(ctx.from!.id);
 
-  if (!isAdmin(ctx.from?.id)) {
+  if (!isAdmin(ctx.from?.id, ctx.from?.username)) {
     await ctx.reply(t(lang).statsDenied, HTML);
     return;
   }
@@ -417,13 +413,16 @@ bot.on("message:document", async (ctx) => {
     return;
   }
 
-  const tokenResult = await consumeToken(BigInt(ctx.from!.id));
-  if (!tokenResult.allowed) {
-    await ctx.reply(s.limitReached(FREE_DAILY_LIMIT, resetCountdown(lang)), {
-      ...HTML,
-      reply_markup: balanceKeyboard(lang),
-    });
-    return;
+  // Администраторы проверяют файлы без ограничений — лимит и токены не трогаем.
+  if (!isAdmin(ctx.from!.id, ctx.from!.username)) {
+    const tokenResult = await consumeToken(BigInt(ctx.from!.id));
+    if (!tokenResult.allowed) {
+      await ctx.reply(s.limitReached(FREE_DAILY_LIMIT, resetCountdown(lang)), {
+        ...HTML,
+        reply_markup: balanceKeyboard(lang),
+      });
+      return;
+    }
   }
 
   const fileTypeLabel = fileExt === ".pdf" ? "PDF" : "APK";
