@@ -19,6 +19,21 @@ function todayUtcString(): string {
   return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
 }
 
+/** Момент следующего сброса бесплатного лимита — ближайшая полночь по UTC. */
+export function nextResetAt(): Date {
+  const now = new Date();
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+  );
+}
+
+/** Сколько времени осталось до сброса дневного лимита. */
+export function timeUntilReset(): { hours: number; minutes: number } {
+  const ms = nextResetAt().getTime() - Date.now();
+  const totalMinutes = Math.max(0, Math.ceil(ms / 60_000));
+  return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
+}
+
 export interface ConsumeResult {
   allowed: boolean;
   source: "free" | "paid" | null;
