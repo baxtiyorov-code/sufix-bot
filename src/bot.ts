@@ -116,7 +116,7 @@ function balanceKeyboard(lang: Lang): InlineKeyboard {
 function buyKeyboard(lang: Lang): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const pkg of TOKEN_PACKAGES) {
-    kb.text(`🟢 ${pkg.tokens} ${t(lang).tokenWord} · ${pkg.stars} ⭐`, `buypkg:${pkg.tokens}:${pkg.stars}`).row();
+    kb.text(`${pkg.tokens} ${t(lang).tokenWord} · ${pkg.stars} ⭐`, `buypkg:${pkg.tokens}:${pkg.stars}`).row();
   }
   kb.text(t(lang).navMenu, "nav:menu");
   return kb;

@@ -172,8 +172,8 @@ const ru: Translations = {
   navBalance: "💳 Баланс",
   navLanguage: "🌐 Язык",
   navHelp: "💡 Помощь",
-  navMenu: "🔵 ‹ Меню",
-  navBuy: "🟢 Купить токены",
+  navMenu: "‹ Меню",
+  navBuy: "Купить токены",
   navRetry: "Отправить другой файл",
 
   help:
@@ -351,8 +351,8 @@ const en: Translations = {
   navBalance: "💳 Balance",
   navLanguage: "🌐 Language",
   navHelp: "💡 Help",
-  navMenu: "🔵 ‹ Menu",
-  navBuy: "🟢 Buy tokens",
+  navMenu: "‹ Menu",
+  navBuy: "Buy tokens",
   navRetry: "Send another file",
 
   help:
@@ -529,8 +529,8 @@ const uz: Translations = {
   navBalance: "💳 Balans",
   navLanguage: "🌐 Til",
   navHelp: "💡 Yordam",
-  navMenu: "🔵 ‹ Menyu",
-  navBuy: "🟢 Token sotib olish",
+  navMenu: "‹ Menyu",
+  navBuy: "Token sotib olish",
   navRetry: "Boshqa fayl yuborish",
 
   help:
