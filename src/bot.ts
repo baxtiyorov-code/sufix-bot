@@ -504,10 +504,7 @@ bot.on("message:document", async (ctx) => {
       fromCache,
     });
 
-    const keyboard = new InlineKeyboard()
-      .url(s.navReport, result.permalink)
-      .row()
-      .text(s.navMenu, "nav:menu");
+    const keyboard = backKeyboard(lang);
 
     await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, messageText, {
       ...HTML,
@@ -640,10 +637,7 @@ bot.on("message:text", async (ctx, next) => {
       safeBrowsing,
     });
 
-    const keyboard = new InlineKeyboard()
-      .url(s.navReport, result.permalink)
-      .row()
-      .text(s.navMenu, "nav:menu");
+    const keyboard = backKeyboard(lang);
 
     await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, messageText, {
       ...HTML,

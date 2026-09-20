@@ -65,7 +65,6 @@ interface Translations {
   navHelp: string;
   navMenu: string;
   navBuy: string;
-  navReport: string;
   navRetry: string;
 
   // ─── Экраны ───
@@ -170,7 +169,6 @@ const ru: Translations = {
   navHelp: "💡 Помощь",
   navMenu: "‹ Меню",
   navBuy: "Купить токены",
-  navReport: "Подробный отчёт",
   navRetry: "Отправить другой файл",
 
   help:
@@ -343,7 +341,6 @@ const en: Translations = {
   navHelp: "💡 Help",
   navMenu: "‹ Menu",
   navBuy: "Buy tokens",
-  navReport: "Detailed report",
   navRetry: "Send another file",
 
   help:
@@ -515,7 +512,6 @@ const uz: Translations = {
   navHelp: "💡 Yordam",
   navMenu: "‹ Menyu",
   navBuy: "Token sotib olish",
-  navReport: "Batafsil hisobot",
   navRetry: "Boshqa fayl yuborish",
 
   help:
