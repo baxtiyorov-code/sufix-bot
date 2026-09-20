@@ -21,6 +21,15 @@ export const LANGUAGE_NAMES: Record<Lang, string> = {
 
 export const BRAND = "GUARDIX";
 
+/** Выбирает нужную форму русского слова по числу: 1 ссылка / 2 ссылки / 5 ссылок. */
+function pluralRu(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+  return many;
+}
+
 export type VerdictKind = "clean" | "suspicious" | "malicious";
 
 interface ScanResultParams {
@@ -32,6 +41,8 @@ interface ScanResultParams {
   total: number;
   meter: string; // визуальная шкала детектов
   fromCache: boolean;
+  /** Результат Google Safe Browsing — только для ссылок, если ключ настроен. */
+  safeBrowsing?: "clean" | "threat";
 }
 
 interface MenuCommand {
@@ -63,7 +74,7 @@ interface Translations {
   languageSaved: (lang: string) => string;
 
   historyTitle: string;
-  historyRow: (emoji: string, name: string, date: string) => string;
+  historyRow: (emoji: string, typeIcon: string, name: string, date: string) => string;
   historyEmpty: string;
   historyEmptyHint: string;
 
@@ -115,6 +126,10 @@ interface Translations {
   scanningTitle: string;
   scanningTitleUrl: string;
   urlTypeLabel: string;
+  /** В сообщении, кроме проверяемой, есть ещё N ссылок. */
+  multipleLinksNotice: (extraCount: number) => string;
+  /** Сообщение содержит больше ссылок, чем разрешено проверять за раз. */
+  tooManyLinks: (found: number, max: number) => string;
   steps: {
     download: string;
     search: string;
@@ -173,7 +188,7 @@ const ru: Translations = {
   historyTitle:
     "🗂 <b>ПОСЛЕДНИЕ ПРОВЕРКИ</b>\n\n" +
     "<blockquote>Пять недавних файлов. Полный архив — в вашем профиле.</blockquote>",
-  historyRow: (emoji, name, date) => `${emoji}  <b>${name}</b>\n<i>${date}</i>`,
+  historyRow: (emoji, typeIcon, name, date) => `${emoji} ${typeIcon} <b>${name}</b>\n<i>${date}</i>`,
   historyEmpty: "🗂 <b>ИСТОРИЯ ПУСТА</b>",
   historyEmptyHint:
     "<blockquote>Здесь появятся ваши проверки. Отправьте первый PDF или APK файл в чат.</blockquote>",
@@ -236,12 +251,19 @@ const ru: Translations = {
   scanningTitle: "⏳ <b>ПРОВЕРЯЮ ФАЙЛ</b>",
   scanningTitleUrl: "⏳ <b>ПРОВЕРЯЮ ССЫЛКУ</b>",
   urlTypeLabel: URL_LABEL_RU,
+  multipleLinksNotice: (extraCount) =>
+    `ℹ️ В сообщении есть ещё ${extraCount} ${pluralRu(extraCount, "ссылка", "ссылки", "ссылок")} — ` +
+    "проверяю первую. Чтобы проверить остальные, отправьте их отдельными сообщениями.",
+  tooManyLinks: (found, max) =>
+    "📄 <b>СЛИШКОМ МНОГО ССЫЛОК</b>\n\n" +
+    `<blockquote>В сообщении ${found} ссылок, а за раз проверяю не больше ${max}. ` +
+    "Отправьте ссылки по одной или небольшими группами.</blockquote>",
   steps: {
     download: "Загружаю файл из Telegram",
     search: "Ищу в базе данных",
     analyze: "Сканирую ~70 антивирусами",
   },
-  scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache }) => {
+  scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache, safeBrowsing }) => {
     const isUrl = fileType === URL_LABEL_RU;
     const icon = isUrl ? "🔗" : "📄";
     const badge = kind === "malicious" ? "🔴" : kind === "suspicious" ? "🟡" : "🟢";
@@ -272,6 +294,9 @@ const ru: Translations = {
       `${fileType}` + (fileSize ? `   ·   ${fileSize}` : "") + `\n\n` +
       `Детекты: <b>${detected} / ${total}</b>\n` +
       `<code>${meter}</code>` +
+      (safeBrowsing
+        ? `\n🔎 Google Safe Browsing: <b>${safeBrowsing === "threat" ? "обнаружена угроза" : "чисто"}</b>`
+        : "") +
       (fromCache ? "\n\n<i>💾 Результат из базы — уже проверяли ранее.</i>" : "")
     );
   },
@@ -337,7 +362,7 @@ const en: Translations = {
   historyTitle:
     "🗂 <b>RECENT SCANS</b>\n\n" +
     "<blockquote>Your five most recent files. Full archive lives in your profile.</blockquote>",
-  historyRow: (emoji, name, date) => `${emoji}  <b>${name}</b>\n<i>${date}</i>`,
+  historyRow: (emoji, typeIcon, name, date) => `${emoji} ${typeIcon} <b>${name}</b>\n<i>${date}</i>`,
   historyEmpty: "🗂 <b>NO HISTORY YET</b>",
   historyEmptyHint:
     "<blockquote>Your scans will show up here. Send your first PDF or APK file to the chat.</blockquote>",
@@ -400,12 +425,19 @@ const en: Translations = {
   scanningTitle: "⏳ <b>SCANNING FILE</b>",
   scanningTitleUrl: "⏳ <b>SCANNING LINK</b>",
   urlTypeLabel: URL_LABEL_EN,
+  multipleLinksNotice: (extraCount) =>
+    `ℹ️ There ${extraCount === 1 ? "is" : "are"} ${extraCount} more link${extraCount === 1 ? "" : "s"} in this message — ` +
+    "checking the first one. Send the rest as separate messages to check them too.",
+  tooManyLinks: (found, max) =>
+    "📄 <b>TOO MANY LINKS</b>\n\n" +
+    `<blockquote>This message has ${found} links, but I can only check ${max} at a time. ` +
+    "Send links one at a time or in smaller batches.</blockquote>",
   steps: {
     download: "Downloading file from Telegram",
     search: "Looking it up in the database",
     analyze: "Scanning with ~70 engines",
   },
-  scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache }) => {
+  scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache, safeBrowsing }) => {
     const isUrl = fileType === URL_LABEL_EN;
     const icon = isUrl ? "🔗" : "📄";
     const badge = kind === "malicious" ? "🔴" : kind === "suspicious" ? "🟡" : "🟢";
@@ -434,6 +466,9 @@ const en: Translations = {
       `${fileType}` + (fileSize ? `   ·   ${fileSize}` : "") + `\n\n` +
       `Detections: <b>${detected} / ${total}</b>\n` +
       `<code>${meter}</code>` +
+      (safeBrowsing
+        ? `\n🔎 Google Safe Browsing: <b>${safeBrowsing === "threat" ? "threat found" : "clean"}</b>`
+        : "") +
       (fromCache ? "\n\n<i>💾 Result from our database — already scanned before.</i>" : "")
     );
   },
@@ -499,7 +534,7 @@ const uz: Translations = {
   historyTitle:
     "🗂 <b>OXIRGI TEKSHIRUVLAR</b>\n\n" +
     "<blockquote>Oxirgi beshta fayl. To'liq arxiv profilingizda.</blockquote>",
-  historyRow: (emoji, name, date) => `${emoji}  <b>${name}</b>\n<i>${date}</i>`,
+  historyRow: (emoji, typeIcon, name, date) => `${emoji} ${typeIcon} <b>${name}</b>\n<i>${date}</i>`,
   historyEmpty: "🗂 <b>TARIX BO'SH</b>",
   historyEmptyHint:
     "<blockquote>Tekshiruvlaringiz shu yerda ko'rinadi. Birinchi PDF yoki APK faylni chatga yuboring.</blockquote>",
@@ -562,12 +597,19 @@ const uz: Translations = {
   scanningTitle: "⏳ <b>FAYL TEKSHIRILMOQDA</b>",
   scanningTitleUrl: "⏳ <b>HAVOLA TEKSHIRILMOQDA</b>",
   urlTypeLabel: URL_LABEL_UZ,
+  multipleLinksNotice: (extraCount) =>
+    `ℹ️ Xabarda yana ${extraCount} ta havola bor — birinchisini tekshiryapman. ` +
+    "Qolganlarini tekshirish uchun alohida xabar sifatida yuboring.",
+  tooManyLinks: (found, max) =>
+    "📄 <b>HAVOLALAR JUDA KO'P</b>\n\n" +
+    `<blockquote>Xabarda ${found} ta havola bor, men esa bir vaqtda ko'pi bilan ${max} tasini tekshiraman. ` +
+    "Havolalarni birma-bir yoki kichik guruhlarda yuboring.</blockquote>",
   steps: {
     download: "Fayl Telegramdan yuklab olinmoqda",
     search: "Bazadan qidirilmoqda",
     analyze: "~70 antivirus bilan skanerlanmoqda",
   },
-  scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache }) => {
+  scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache, safeBrowsing }) => {
     const isUrl = fileType === URL_LABEL_UZ;
     const icon = isUrl ? "🔗" : "📄";
     const badge = kind === "malicious" ? "🔴" : kind === "suspicious" ? "🟡" : "🟢";
@@ -596,6 +638,9 @@ const uz: Translations = {
       `${fileType}` + (fileSize ? `   ·   ${fileSize}` : "") + `\n\n` +
       `Aniqlanishlar: <b>${detected} / ${total}</b>\n` +
       `<code>${meter}</code>` +
+      (safeBrowsing
+        ? `\n🔎 Google Safe Browsing: <b>${safeBrowsing === "threat" ? "tahdid topildi" : "toza"}</b>`
+        : "") +
       (fromCache ? "\n\n<i>💾 Natija bazadan — avval tekshirilgan.</i>" : "")
     );
   },

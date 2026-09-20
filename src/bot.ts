@@ -2,6 +2,7 @@ import "dotenv/config";
 import { Bot, Context, InlineKeyboard } from "grammy";
 import axios from "axios";
 import { scanFile, getReportByHash, sha256, scanUrl, getUrlReport, urlId } from "./virustotal";
+import { checkSafeBrowsing } from "./safebrowsing";
 import { prisma } from "./db";
 import { t, Lang, BRAND, LANGUAGE_NAMES, isValidLang } from "./i18n";
 import { consumeToken, addPaidTokens, getBalance, timeUntilReset, FREE_DAILY_LIMIT, TOKEN_PACKAGES } from "./tokens";
@@ -16,6 +17,8 @@ import { isAdmin } from "./admins";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const VT_API_KEY = process.env.VIRUSTOTAL_API_KEY;
+// Необязательный второй источник вердикта для ссылок. Если не задан — просто не используется.
+const SAFE_BROWSING_KEY = process.env.GOOGLE_SAFE_BROWSING_API_KEY;
 
 if (!BOT_TOKEN || !VT_API_KEY) {
   throw new Error("Не заданы BOT_TOKEN или VIRUSTOTAL_API_KEY в переменных окружения.");
@@ -33,11 +36,12 @@ function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-/** Находит первую http/https-ссылку в тексте сообщения. */
-const URL_PATTERN = /\bhttps?:\/\/[^\s<>"']+/i;
+/** Находит все http/https-ссылки в тексте сообщения. */
+const URL_PATTERN_GLOBAL = /\bhttps?:\/\/[^\s<>"']+/gi;
+const MAX_LINKS_IN_MESSAGE = 15; // защита от спам-сообщений с кучей ссылок
 
-function extractUrl(text: string): string | null {
-  return text.match(URL_PATTERN)?.[0] ?? null;
+function extractUrls(text: string): string[] {
+  return [...text.matchAll(URL_PATTERN_GLOBAL)].map((m) => m[0]);
 }
 
 /** Сокращает длинную ссылку для отображения, не трогая саму ссылку для проверки. */
@@ -218,13 +222,14 @@ async function historyScreen(userId: number, lang: Lang): Promise<string> {
   const verdictEmoji = { clean: "🟢", suspicious: "🟡", malicious: "🔴" } as const;
   const rows = scans.map((scan) => {
     const emoji = verdictEmoji[scan.verdict as keyof typeof verdictEmoji] ?? "•";
+    const typeIcon = scan.kind === "url" ? "🔗" : "📄";
     const date = scan.createdAt.toLocaleString("ru-RU", {
       day: "2-digit",
       month: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
     });
-    return s.historyRow(emoji, escapeHtml(truncateForDisplay(scan.fileName, 45)), date);
+    return s.historyRow(emoji, typeIcon, escapeHtml(truncateForDisplay(scan.fileName, 45)), date);
   });
 
   return `${s.historyTitle}\n\n${rows.join("\n\n")}`;
@@ -543,14 +548,26 @@ bot.on("message:document", async (ctx) => {
 // ─────────────────────────────────────────────────────────
 
 bot.on("message:text", async (ctx, next) => {
-  const url = extractUrl(ctx.message.text);
-  if (!url) {
+  const urls = extractUrls(ctx.message.text);
+  if (urls.length === 0) {
     await next(); // не ссылка — отдаём дальше catch-all-обработчику
     return;
   }
 
   const lang = await getUserLang(ctx.from!.id);
   const s = t(lang);
+
+  // Защита от спам-сообщений с кучей ссылок: не сканируем ни одной.
+  if (urls.length > MAX_LINKS_IN_MESSAGE) {
+    await ctx.reply(s.tooManyLinks(urls.length, MAX_LINKS_IN_MESSAGE), {
+      ...HTML,
+      reply_markup: backKeyboard(lang),
+    });
+    return;
+  }
+
+  const url = urls[0];
+  const extraLinks = urls.length - 1;
   const safeUrl = escapeHtml(truncateForDisplay(url));
 
   // Администраторы проверяют без ограничений — лимит и токены не трогаем.
@@ -568,6 +585,7 @@ bot.on("message:text", async (ctx, next) => {
   const scanScreen = (step: number, label: string): string =>
     `${s.scanningTitleUrl}\n\n` +
     `🔗 <b>${safeUrl}</b>\n\n` +
+    (extraLinks > 0 ? `<i>${s.multipleLinksNotice(extraLinks)}</i>\n\n` : "") +
     `<code>${progressBar(step, 2)}</code>  ${label}`;
 
   const statusMsg = await ctx.reply(scanScreen(1, s.steps.search), HTML);
@@ -597,6 +615,19 @@ bot.on("message:text", async (ctx, next) => {
 
     const detected = verdict === "malicious" ? malicious : verdict === "suspicious" ? suspicious : 0;
 
+    // Второй, независимый от VirusTotal источник — особенно силён против фишинга.
+    // Если он находит угрозу, вердикт повышается до «опасно», даже если антивирусы её не поймали.
+    let safeBrowsing: "clean" | "threat" | undefined;
+    if (SAFE_BROWSING_KEY) {
+      try {
+        const sb = await checkSafeBrowsing(url, SAFE_BROWSING_KEY);
+        safeBrowsing = sb.threatFound ? "threat" : "clean";
+        if (sb.threatFound) verdict = "malicious";
+      } catch (sbError) {
+        console.error("Safe Browsing проверка не удалась:", sbError);
+      }
+    }
+
     const messageText = s.scanResult({
       kind: verdict,
       fileName: safeUrl,
@@ -606,6 +637,7 @@ bot.on("message:text", async (ctx, next) => {
       total: totalEngines,
       meter: detectionMeter(detected, totalEngines),
       fromCache,
+      safeBrowsing,
     });
 
     const keyboard = new InlineKeyboard()
