@@ -83,7 +83,7 @@ async function uploadFile(
 async function waitForAnalysis(
   analysisId: string,
   apiKey: string,
-  maxAttempts = 15,
+  maxAttempts = 30,
   delayMs = 4000
 ): Promise<any> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -121,4 +121,66 @@ export async function scanFile(
     : "https://www.virustotal.com";
 
   return { stats, permalink };
+}
+
+/** Идентификатор URL в VirusTotal — base64url от адреса без паддинга. */
+export function urlId(url: string): string {
+  return Buffer.from(url).toString("base64url").replace(/=+$/, "");
+}
+
+/**
+ * Проверяет, есть ли уже готовый отчёт по этой ссылке в базе VirusTotal.
+ * Возвращает null, если ссылку ещё никогда не проверяли (нужен полный анализ).
+ */
+export async function getUrlReport(
+  url: string,
+  apiKey: string
+): Promise<ScanResult | null> {
+  const id = urlId(url);
+  try {
+    const response = await axios.get(`${VT_BASE}/urls/${id}`, {
+      headers: { "x-apikey": apiKey },
+    });
+
+    const stats: VtAnalysisStats =
+      response.data.data.attributes.last_analysis_stats;
+
+    return {
+      stats,
+      permalink: `https://www.virustotal.com/gui/url/${id}`,
+    };
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      return null; // ссылка не найдена в базе — нужен полный анализ
+    }
+    throw error;
+  }
+}
+
+/** Отправляет ссылку на анализ и возвращает ID анализа. */
+async function submitUrl(url: string, apiKey: string): Promise<string> {
+  const form = new URLSearchParams();
+  form.append("url", url);
+
+  const response = await axios.post(`${VT_BASE}/urls`, form.toString(), {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "x-apikey": apiKey,
+    },
+  });
+
+  return response.data.data.id as string;
+}
+
+/**
+ * Полный цикл: отправка ссылки + ожидание результата.
+ * Используется только если getUrlReport не нашёл готового отчёта.
+ */
+export async function scanUrl(url: string, apiKey: string): Promise<ScanResult> {
+  const analysisId = await submitUrl(url, apiKey);
+  const analysisData = await waitForAnalysis(analysisId, apiKey);
+
+  const stats: VtAnalysisStats = analysisData.data.attributes.stats;
+
+  return { stats, permalink: `https://www.virustotal.com/gui/url/${urlId(url)}` };
 }

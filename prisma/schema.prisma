@@ -12,10 +12,11 @@ datasource db {
 
 model Scan {
   id         Int      @id @default(autoincrement())
-  fileName   String
-  fileType   String
-  fileHash   String
-  fileSizeMb Float
+  kind       String   @default("file") // "file" | "url"
+  fileName   String // для ссылок — сам адрес
+  fileType   String // "PDF" | "APK" | "URL"
+  fileHash   String // для ссылок — urlId (base64url)
+  fileSizeMb Float // для ссылок — 0
   malicious  Int
   suspicious Int
   harmless   Int

@@ -26,8 +26,8 @@ export type VerdictKind = "clean" | "suspicious" | "malicious";
 interface ScanResultParams {
   kind: VerdictKind;
   fileName: string; // уже экранирован
-  fileType: string; // "PDF" | "APK"
-  fileSize: string; // "2.41 MB"
+  fileType: string; // "PDF" | "APK" | urlTypeLabel
+  fileSize: string; // "2.41 MB", для ссылок — ""
   detected: number;
   total: number;
   meter: string; // визуальная шкала детектов
@@ -109,10 +109,12 @@ interface Translations {
   paymentSuccess: (tokens: number) => string;
   limitReached: (dailyLimit: number, resetIn: string) => string;
 
-  // ─── Проверка файла ───
+  // ─── Проверка файла и ссылок ───
   unsupportedExt: string;
   tooLarge: (sizeMb: string, maxMb: number) => string;
   scanningTitle: string;
+  scanningTitleUrl: string;
+  urlTypeLabel: string;
   steps: {
     download: string;
     search: string;
@@ -133,12 +135,15 @@ interface Translations {
 // RU
 // ────────────────────────────────────────────────────────────────
 
+const URL_LABEL_RU = "Ссылка";
+
 const ru: Translations = {
-  heroTagline: "Проверка PDF и APK через 70+ антивирусных движков",
+  heroTagline: "Проверка файлов и ссылок через 70+ антивирусных движков",
   heroBody: (maxSizeMb) =>
-    "<blockquote>Отправьте файл в чат как <b>документ</b> — проверю его " +
+    "<blockquote>Отправьте файл (как <b>документ</b>) или ссылку — проверю " +
     "примерно 70 антивирусными движками и пришлю вердикт.</blockquote>\n\n" +
-    `📎 Форматы: <b>PDF</b>, <b>APK</b>   ·   до <b>${maxSizeMb} МБ</b>`,
+    `📎 Файлы: <b>PDF</b>, <b>APK</b>   ·   до <b>${maxSizeMb} МБ</b>\n` +
+    "🔗 Ссылки: любой адрес вида http:// или https://",
   menuBalanceLabel: "Баланс",
   menuBalanceValue: (free, limit, paid) =>
     `${free}/${limit} бесплатных сегодня · ${paid} токенов`,
@@ -155,11 +160,11 @@ const ru: Translations = {
 
   help:
     "💡 <b>КАК ЭТО РАБОТАЕТ</b>\n\n" +
-    "<blockquote>Файл проверяется примерно 70 антивирусами одновременно. " +
-    "Если его уже проверяли раньше — ответ придёт мгновенно.</blockquote>\n\n" +
-    "<b>1.</b> Отправьте <b>.pdf</b> или <b>.apk</b> как документ, не как медиа\n" +
+    "<blockquote>Файл или ссылка проверяются примерно 70 антивирусами одновременно. " +
+    "Если их уже проверяли раньше — ответ придёт мгновенно.</blockquote>\n\n" +
+    "<b>1.</b> Отправьте <b>.pdf</b>/<b>.apk</b> как документ, или пришлите ссылку (http/https)\n" +
     "<b>2.</b> Дождитесь результата — от пары секунд до минуты\n" +
-    "<b>3.</b> Получите вердикт и ссылку на полный отчёт\n\n" +
+    "<b>3.</b> Получите вердикт и ссылку на подробный отчёт\n\n" +
     "Бесплатно — 3 проверки в сутки. Больше — за токены.",
 
   languagePrompt: "🌐 <b>ЯЗЫК ИНТЕРФЕЙСА</b>\n\n<blockquote>Выберите язык — он сохранится для всех сообщений бота.</blockquote>",
@@ -229,36 +234,53 @@ const ru: Translations = {
     "📄 <b>ФАЙЛ СЛИШКОМ БОЛЬШОЙ</b>\n\n" +
     `<blockquote>Размер файла — <b>${sizeMb} МБ</b>, а лимит на проверку — <b>${maxMb} МБ</b>.</blockquote>`,
   scanningTitle: "⏳ <b>ПРОВЕРЯЮ ФАЙЛ</b>",
+  scanningTitleUrl: "⏳ <b>ПРОВЕРЯЮ ССЫЛКУ</b>",
+  urlTypeLabel: URL_LABEL_RU,
   steps: {
     download: "Загружаю файл из Telegram",
-    search: "Ищу файл в базе данных",
+    search: "Ищу в базе данных",
     analyze: "Сканирую ~70 антивирусами",
   },
   scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache }) => {
+    const isUrl = fileType === URL_LABEL_RU;
+    const icon = isUrl ? "🔗" : "📄";
     const badge = kind === "malicious" ? "🔴" : kind === "suspicious" ? "🟡" : "🟢";
-    const title = kind === "malicious" ? "ОПАСНО" : kind === "suspicious" ? "ПОДОЗРИТЕЛЬНО" : "ФАЙЛ ЧИСТ";
+    const title =
+      kind === "malicious"
+        ? "ОПАСНО"
+        : kind === "suspicious"
+        ? "ПОДОЗРИТЕЛЬНО"
+        : isUrl
+        ? "ССЫЛКА БЕЗОПАСНА"
+        : "ФАЙЛ ЧИСТ";
     const summary =
       kind === "malicious"
-        ? `<b>${detected}</b> из ${total} антивирусов определили файл как вредоносный. Не открывайте и не устанавливайте его.`
+        ? isUrl
+          ? `<b>${detected}</b> из ${total} антивирусов считают эту ссылку вредоносной. Не переходите по ней.`
+          : `<b>${detected}</b> из ${total} антивирусов определили файл как вредоносный. Не открывайте и не устанавливайте его.`
         : kind === "suspicious"
-        ? `<b>${detected}</b> из ${total} антивирусов сочли файл подозрительным. Отнеситесь с осторожностью.`
+        ? isUrl
+          ? `<b>${detected}</b> из ${total} антивирусов считают эту ссылку подозрительной. Будьте осторожны.`
+          : `<b>${detected}</b> из ${total} антивирусов сочли файл подозрительным. Отнеситесь с осторожностью.`
+        : isUrl
+        ? `Проверено ${total} антивирусами — угроз не обнаружено.`
         : `Проверено ${total} антивирусами — угроз не обнаружено.`;
     return (
       `${badge} <b>${title}</b>\n\n` +
       `<blockquote>${summary}</blockquote>\n\n` +
-      `📄 <b>${fileName}</b>\n` +
-      `${fileType}   ·   ${fileSize}\n\n` +
+      `${icon} <b>${fileName}</b>\n` +
+      `${fileType}` + (fileSize ? `   ·   ${fileSize}` : "") + `\n\n` +
       `Детекты: <b>${detected} / ${total}</b>\n` +
       `<code>${meter}</code>` +
-      (fromCache ? "\n\n<i>💾 Результат из базы — файл проверяли ранее.</i>" : "")
+      (fromCache ? "\n\n<i>💾 Результат из базы — уже проверяли ранее.</i>" : "")
     );
   },
   error:
     "🔴 <b>НЕ УДАЛОСЬ ПРОВЕРИТЬ</b>\n\n" +
-    "<blockquote>Что-то пошло не так при проверке или в сети. Попробуйте отправить файл ещё раз через минуту.</blockquote>",
+    "<blockquote>Что-то пошло не так при проверке или в сети. Попробуйте ещё раз через минуту.</blockquote>",
   nonDocument:
-    "📄 <b>ОТПРАВЬТЕ ФАЙЛ</b>\n\n" +
-    "<blockquote>Пришлите PDF или APK <b>как документ</b> (скрепка → Файл), и я запущу проверку.</blockquote>",
+    "📄 <b>ОТПРАВЬТЕ ФАЙЛ ИЛИ ССЫЛКУ</b>\n\n" +
+    "<blockquote>Пришлите PDF или APK <b>как документ</b> (скрепка → Файл), либо отправьте ссылку (http/https) — и я запущу проверку.</blockquote>",
 
   resetTimer: (hours, minutes) => (hours > 0 ? `${hours} ч ${minutes} мин` : `${minutes} мин`),
 
@@ -277,12 +299,15 @@ const ru: Translations = {
 // EN
 // ────────────────────────────────────────────────────────────────
 
+const URL_LABEL_EN = "Link";
+
 const en: Translations = {
-  heroTagline: "Scan PDF and APK files with 70+ antivirus engines",
+  heroTagline: "Scan files and links with 70+ antivirus engines",
   heroBody: (maxSizeMb) =>
-    "<blockquote>Send a file to the chat as a <b>document</b> — I'll run it " +
+    "<blockquote>Send a file (as a <b>document</b>) or a link — I'll run it " +
     "through ~70 antivirus engines and return a verdict.</blockquote>\n\n" +
-    `📎 Formats: <b>PDF</b>, <b>APK</b>   ·   up to <b>${maxSizeMb} MB</b>`,
+    `📎 Files: <b>PDF</b>, <b>APK</b>   ·   up to <b>${maxSizeMb} MB</b>\n` +
+    "🔗 Links: any http:// or https:// address",
   menuBalanceLabel: "Balance",
   menuBalanceValue: (free, limit, paid) => `${free}/${limit} free today · ${paid} tokens`,
 
@@ -298,11 +323,11 @@ const en: Translations = {
 
   help:
     "💡 <b>HOW IT WORKS</b>\n\n" +
-    "<blockquote>Your file is checked by ~70 antivirus engines at once. " +
+    "<blockquote>Your file or link is checked by ~70 antivirus engines at once. " +
     "If it was scanned before, the answer is instant.</blockquote>\n\n" +
-    "<b>1.</b> Send a <b>.pdf</b> or <b>.apk</b> as a document, not as media\n" +
+    "<b>1.</b> Send a <b>.pdf</b>/<b>.apk</b> as a document, or send a link (http/https)\n" +
     "<b>2.</b> Wait for the result — a few seconds to a minute\n" +
-    "<b>3.</b> Get a verdict and a link to the full report\n\n" +
+    "<b>3.</b> Get a verdict and a detailed report\n\n" +
     "Free tier — 3 scans per day. More via tokens.",
 
   languagePrompt:
@@ -373,36 +398,51 @@ const en: Translations = {
     "📄 <b>FILE TOO LARGE</b>\n\n" +
     `<blockquote>The file is <b>${sizeMb} MB</b>, but the scan limit is <b>${maxMb} MB</b>.</blockquote>`,
   scanningTitle: "⏳ <b>SCANNING FILE</b>",
+  scanningTitleUrl: "⏳ <b>SCANNING LINK</b>",
+  urlTypeLabel: URL_LABEL_EN,
   steps: {
     download: "Downloading file from Telegram",
     search: "Looking it up in the database",
     analyze: "Scanning with ~70 engines",
   },
   scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache }) => {
+    const isUrl = fileType === URL_LABEL_EN;
+    const icon = isUrl ? "🔗" : "📄";
     const badge = kind === "malicious" ? "🔴" : kind === "suspicious" ? "🟡" : "🟢";
-    const title = kind === "malicious" ? "DANGEROUS" : kind === "suspicious" ? "SUSPICIOUS" : "FILE IS CLEAN";
+    const title =
+      kind === "malicious"
+        ? "DANGEROUS"
+        : kind === "suspicious"
+        ? "SUSPICIOUS"
+        : isUrl
+        ? "LINK IS SAFE"
+        : "FILE IS CLEAN";
     const summary =
       kind === "malicious"
-        ? `<b>${detected}</b> of ${total} engines flagged this file as malicious. Do not open or install it.`
+        ? isUrl
+          ? `<b>${detected}</b> of ${total} engines flagged this link as malicious. Don't open it.`
+          : `<b>${detected}</b> of ${total} engines flagged this file as malicious. Do not open or install it.`
         : kind === "suspicious"
-        ? `<b>${detected}</b> of ${total} engines flagged this file as suspicious. Proceed with caution.`
+        ? isUrl
+          ? `<b>${detected}</b> of ${total} engines flagged this link as suspicious. Proceed with caution.`
+          : `<b>${detected}</b> of ${total} engines flagged this file as suspicious. Proceed with caution.`
         : `Scanned by ${total} engines — no threats found.`;
     return (
       `${badge} <b>${title}</b>\n\n` +
       `<blockquote>${summary}</blockquote>\n\n` +
-      `📄 <b>${fileName}</b>\n` +
-      `${fileType}   ·   ${fileSize}\n\n` +
+      `${icon} <b>${fileName}</b>\n` +
+      `${fileType}` + (fileSize ? `   ·   ${fileSize}` : "") + `\n\n` +
       `Detections: <b>${detected} / ${total}</b>\n` +
       `<code>${meter}</code>` +
-      (fromCache ? "\n\n<i>💾 Result from our database — this file was scanned before.</i>" : "")
+      (fromCache ? "\n\n<i>💾 Result from our database — already scanned before.</i>" : "")
     );
   },
   error:
     "🔴 <b>SCAN FAILED</b>\n\n" +
-    "<blockquote>Something went wrong during the scan or the network. Try sending the file again in a minute.</blockquote>",
+    "<blockquote>Something went wrong during the scan or the network. Try again in a minute.</blockquote>",
   nonDocument:
-    "📄 <b>SEND A FILE</b>\n\n" +
-    "<blockquote>Send a PDF or APK <b>as a document</b> (attach → File) and I'll start the scan.</blockquote>",
+    "📄 <b>SEND A FILE OR LINK</b>\n\n" +
+    "<blockquote>Send a PDF or APK <b>as a document</b> (attach → File), or send a link (http/https) and I'll start the scan.</blockquote>",
 
   resetTimer: (hours, minutes) => (hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`),
 
@@ -421,12 +461,15 @@ const en: Translations = {
 // UZ
 // ────────────────────────────────────────────────────────────────
 
+const URL_LABEL_UZ = "Havola";
+
 const uz: Translations = {
-  heroTagline: "PDF va APK fayllarni 70+ antivirus dvigateli bilan tekshirish",
+  heroTagline: "Fayllar va havolalarni 70+ antivirus dvigateli bilan tekshirish",
   heroBody: (maxSizeMb) =>
-    "<blockquote>Faylni chatga <b>hujjat</b> sifatida yuboring — uni ~70 ta " +
+    "<blockquote>Faylni (<b>hujjat</b> sifatida) yoki havolani yuboring — ~70 ta " +
     "antivirus bilan tekshirib, xulosa qaytaraman.</blockquote>\n\n" +
-    `📎 Formatlar: <b>PDF</b>, <b>APK</b>   ·   <b>${maxSizeMb} MB</b> gacha`,
+    `📎 Fayllar: <b>PDF</b>, <b>APK</b>   ·   <b>${maxSizeMb} MB</b> gacha\n` +
+    "🔗 Havolalar: http:// yoki https:// bilan boshlangan istalgan manzil",
   menuBalanceLabel: "Balans",
   menuBalanceValue: (free, limit, paid) => `bugun ${free}/${limit} bepul · ${paid} token`,
 
@@ -442,11 +485,11 @@ const uz: Translations = {
 
   help:
     "💡 <b>QANDAY ISHLAYDI</b>\n\n" +
-    "<blockquote>Fayl bir vaqtda ~70 ta antivirus bilan tekshiriladi. " +
+    "<blockquote>Fayl yoki havola bir vaqtda ~70 ta antivirus bilan tekshiriladi. " +
     "Agar u avval tekshirilgan bo'lsa — javob darhol keladi.</blockquote>\n\n" +
-    "<b>1.</b> <b>.pdf</b> yoki <b>.apk</b> ni hujjat sifatida yuboring, media emas\n" +
+    "<b>1.</b> <b>.pdf</b>/<b>.apk</b> ni hujjat sifatida yuboring, yoki havola (http/https) yuboring\n" +
     "<b>2.</b> Natijani kuting — bir necha soniyadan bir daqiqagacha\n" +
-    "<b>3.</b> Xulosa va to'liq hisobot havolasini oling\n\n" +
+    "<b>3.</b> Xulosa va batafsil hisobotni oling\n\n" +
     "Bepul — kuniga 3 ta tekshiruv. Ko'proq — tokenlar orqali.",
 
   languagePrompt:
@@ -517,36 +560,51 @@ const uz: Translations = {
     "📄 <b>FAYL JUDA KATTA</b>\n\n" +
     `<blockquote>Fayl hajmi — <b>${sizeMb} MB</b>, tekshiruv chegarasi esa <b>${maxMb} MB</b>.</blockquote>`,
   scanningTitle: "⏳ <b>FAYL TEKSHIRILMOQDA</b>",
+  scanningTitleUrl: "⏳ <b>HAVOLA TEKSHIRILMOQDA</b>",
+  urlTypeLabel: URL_LABEL_UZ,
   steps: {
     download: "Fayl Telegramdan yuklab olinmoqda",
     search: "Bazadan qidirilmoqda",
     analyze: "~70 antivirus bilan skanerlanmoqda",
   },
   scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache }) => {
+    const isUrl = fileType === URL_LABEL_UZ;
+    const icon = isUrl ? "🔗" : "📄";
     const badge = kind === "malicious" ? "🔴" : kind === "suspicious" ? "🟡" : "🟢";
-    const title = kind === "malicious" ? "XAVFLI" : kind === "suspicious" ? "SHUBHALI" : "FAYL TOZA";
+    const title =
+      kind === "malicious"
+        ? "XAVFLI"
+        : kind === "suspicious"
+        ? "SHUBHALI"
+        : isUrl
+        ? "HAVOLA XAVFSIZ"
+        : "FAYL TOZA";
     const summary =
       kind === "malicious"
-        ? `${total} tadan <b>${detected}</b> tasi antivirus faylni zararli deb belgiladi. Uni ochmang va o'rnatmang.`
+        ? isUrl
+          ? `${total} tadan <b>${detected}</b> tasi antivirus bu havolani zararli deb belgiladi. Unga o'tmang.`
+          : `${total} tadan <b>${detected}</b> tasi antivirus faylni zararli deb belgiladi. Uni ochmang va o'rnatmang.`
         : kind === "suspicious"
-        ? `${total} tadan <b>${detected}</b> tasi antivirus faylni shubhali deb belgiladi. Ehtiyot bo'ling.`
+        ? isUrl
+          ? `${total} tadan <b>${detected}</b> tasi antivirus bu havolani shubhali deb belgiladi. Ehtiyot bo'ling.`
+          : `${total} tadan <b>${detected}</b> tasi antivirus faylni shubhali deb belgiladi. Ehtiyot bo'ling.`
         : `${total} ta antivirus tekshirdi — tahdid topilmadi.`;
     return (
       `${badge} <b>${title}</b>\n\n` +
       `<blockquote>${summary}</blockquote>\n\n` +
-      `📄 <b>${fileName}</b>\n` +
-      `${fileType}   ·   ${fileSize}\n\n` +
+      `${icon} <b>${fileName}</b>\n` +
+      `${fileType}` + (fileSize ? `   ·   ${fileSize}` : "") + `\n\n` +
       `Aniqlanishlar: <b>${detected} / ${total}</b>\n` +
       `<code>${meter}</code>` +
-      (fromCache ? "\n\n<i>💾 Natija bazadan — fayl avval tekshirilgan.</i>" : "")
+      (fromCache ? "\n\n<i>💾 Natija bazadan — avval tekshirilgan.</i>" : "")
     );
   },
   error:
     "🔴 <b>TEKSHIRIB BO'LMADI</b>\n\n" +
-    "<blockquote>Tekshiruv yoki tarmoq tomonida nimadir noto'g'ri ketdi. Bir daqiqadan so'ng faylni qayta yuboring.</blockquote>",
+    "<blockquote>Tekshiruv yoki tarmoq tomonida nimadir noto'g'ri ketdi. Bir daqiqadan so'ng qayta urinib ko'ring.</blockquote>",
   nonDocument:
-    "📄 <b>FAYL YUBORING</b>\n\n" +
-    "<blockquote>PDF yoki APK ni <b>hujjat</b> sifatida yuboring (biriktirish → Fayl), men tekshiruvni boshlayman.</blockquote>",
+    "📄 <b>FAYL YOKI HAVOLA YUBORING</b>\n\n" +
+    "<blockquote>PDF yoki APK ni <b>hujjat</b> sifatida yuboring (biriktirish → Fayl), yoki havola (http/https) yuboring — men tekshiruvni boshlayman.</blockquote>",
 
   resetTimer: (hours, minutes) => (hours > 0 ? `${hours} soat ${minutes} daqiqa` : `${minutes} daqiqa`),
 

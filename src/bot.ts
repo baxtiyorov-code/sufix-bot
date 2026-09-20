@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { Bot, Context, InlineKeyboard } from "grammy";
 import axios from "axios";
-import { scanFile, getReportByHash, sha256 } from "./virustotal";
+import { scanFile, getReportByHash, sha256, scanUrl, getUrlReport, urlId } from "./virustotal";
 import { prisma } from "./db";
 import { t, Lang, BRAND, LANGUAGE_NAMES, isValidLang } from "./i18n";
 import { consumeToken, addPaidTokens, getBalance, timeUntilReset, FREE_DAILY_LIMIT, TOKEN_PACKAGES } from "./tokens";
@@ -31,6 +31,18 @@ const HTML = { parse_mode: "HTML" } as const;
 /** Экранирует спецсимволы HTML, чтобы имя файла не ломало разметку сообщения. */
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Находит первую http/https-ссылку в тексте сообщения. */
+const URL_PATTERN = /\bhttps?:\/\/[^\s<>"']+/i;
+
+function extractUrl(text: string): string | null {
+  return text.match(URL_PATTERN)?.[0] ?? null;
+}
+
+/** Сокращает длинную ссылку для отображения, не трогая саму ссылку для проверки. */
+function truncateForDisplay(value: string, max = 70): string {
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -212,7 +224,7 @@ async function historyScreen(userId: number, lang: Lang): Promise<string> {
       hour: "2-digit",
       minute: "2-digit",
     });
-    return s.historyRow(emoji, escapeHtml(scan.fileName), date);
+    return s.historyRow(emoji, escapeHtml(truncateForDisplay(scan.fileName, 45)), date);
   });
 
   return `${s.historyTitle}\n\n${rows.join("\n\n")}`;
@@ -499,10 +511,120 @@ bot.on("message:document", async (ctx) => {
 
     await prisma.scan.create({
       data: {
+        kind: "file",
         fileName,
         fileType: fileExt,
         fileHash,
         fileSizeMb,
+        malicious,
+        suspicious,
+        harmless,
+        undetected,
+        verdict,
+        userId: BigInt(ctx.from!.id),
+        username: ctx.from!.username ?? null,
+        chatId: BigInt(ctx.chat.id),
+        permalink: result.permalink,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    await ctx.api
+      .editMessageText(ctx.chat.id, statusMsg.message_id, s.error, {
+        ...HTML,
+        reply_markup: backKeyboard(lang),
+      })
+      .catch(() => {});
+  }
+});
+
+// ─────────────────────────────────────────────────────────
+// Обработка ссылок
+// ─────────────────────────────────────────────────────────
+
+bot.on("message:text", async (ctx, next) => {
+  const url = extractUrl(ctx.message.text);
+  if (!url) {
+    await next(); // не ссылка — отдаём дальше catch-all-обработчику
+    return;
+  }
+
+  const lang = await getUserLang(ctx.from!.id);
+  const s = t(lang);
+  const safeUrl = escapeHtml(truncateForDisplay(url));
+
+  // Администраторы проверяют без ограничений — лимит и токены не трогаем.
+  if (!isAdmin(ctx.from!.id, ctx.from!.username)) {
+    const tokenResult = await consumeToken(BigInt(ctx.from!.id));
+    if (!tokenResult.allowed) {
+      await ctx.reply(s.limitReached(FREE_DAILY_LIMIT, resetCountdown(lang)), {
+        ...HTML,
+        reply_markup: balanceKeyboard(lang),
+      });
+      return;
+    }
+  }
+
+  const scanScreen = (step: number, label: string): string =>
+    `${s.scanningTitleUrl}\n\n` +
+    `🔗 <b>${safeUrl}</b>\n\n` +
+    `<code>${progressBar(step, 2)}</code>  ${label}`;
+
+  const statusMsg = await ctx.reply(scanScreen(1, s.steps.search), HTML);
+
+  const updateStatus = (text: string) =>
+    ctx.api
+      .editMessageText(ctx.chat.id, statusMsg.message_id, text, HTML)
+      .catch(() => {});
+
+  try {
+    let result = await getUrlReport(url, VT_API_KEY!);
+    let fromCache = true;
+
+    if (!result) {
+      fromCache = false;
+      await updateStatus(scanScreen(2, s.steps.analyze));
+      result = await scanUrl(url, VT_API_KEY!);
+    }
+
+    const { malicious, suspicious, harmless, undetected } = result.stats;
+    const totalEngines = malicious + suspicious + harmless + undetected;
+
+    let verdict: "clean" | "suspicious" | "malicious";
+    if (malicious > 0) verdict = "malicious";
+    else if (suspicious > 0) verdict = "suspicious";
+    else verdict = "clean";
+
+    const detected = verdict === "malicious" ? malicious : verdict === "suspicious" ? suspicious : 0;
+
+    const messageText = s.scanResult({
+      kind: verdict,
+      fileName: safeUrl,
+      fileType: s.urlTypeLabel,
+      fileSize: "",
+      detected,
+      total: totalEngines,
+      meter: detectionMeter(detected, totalEngines),
+      fromCache,
+    });
+
+    const keyboard = new InlineKeyboard()
+      .url(s.navReport, result.permalink)
+      .row()
+      .text(s.navMenu, "nav:menu");
+
+    await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, messageText, {
+      ...HTML,
+      reply_markup: keyboard,
+    });
+
+    await prisma.scan.create({
+      data: {
+        kind: "url",
+        fileName: url,
+        fileType: "url",
+        fileHash: urlId(url),
+        fileSizeMb: 0,
         malicious,
         suspicious,
         harmless,
