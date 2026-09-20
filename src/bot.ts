@@ -136,12 +136,12 @@ function languageKeyboard(lang: Lang): InlineKeyboard {
 // Хелперы
 // ─────────────────────────────────────────────────────────
 
-/** Получает язык пользователя из базы, по умолчанию "ru". */
+/** Получает язык пользователя из базы, по умолчанию "en". */
 async function getUserLang(userId: number): Promise<Lang> {
   const settings = await prisma.userSettings.findUnique({
     where: { userId: BigInt(userId) },
   });
-  return (settings?.language as Lang) ?? "ru";
+  return (settings?.language as Lang) ?? "en";
 }
 
 /** Оставшееся время до сброса дневного лимита, в текущей локали. */
@@ -665,7 +665,7 @@ bot.catch((err) => {
 /** Регистрирует локализованное меню команд и кнопку-меню в интерфейсе Telegram. */
 export async function configureBotProfile(): Promise<void> {
   const langs: Lang[] = ["ru", "en", "uz"];
-  await bot.api.setMyCommands(t("ru").menuCommands);
+  await bot.api.setMyCommands(t("en").menuCommands);
   await Promise.all(
     langs.map((l) => bot.api.setMyCommands(t(l).menuCommands, { language_code: l }))
   );

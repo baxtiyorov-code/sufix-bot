@@ -1,5 +1,10 @@
+// Supabase-проект общий с другим вашим приложением (таблицы agents/tasks/
+// projects/profiles и т.д. в той же базе) — multiSchema нужен только затем,
+// чтобы Prisma не спотыкалась об их внешний ключ profiles → auth.users при
+// диагностике схемы. Сами эти таблицы Prisma не описывает и не трогает.
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
@@ -8,6 +13,7 @@ datasource db {
   url       = env("DATABASE_URL")
   // DIRECT_URL — прямое соединение (Supabase: порт 5432), только для миграций.
   directUrl = env("DIRECT_URL")
+  schemas   = ["public", "auth"]
 }
 
 model Scan {
@@ -30,14 +36,17 @@ model Scan {
 
   @@index([userId])
   @@index([fileHash])
+  @@schema("public")
 }
 
 model UserSettings {
   userId        BigInt   @id
   username      String?
-  language      String   @default("ru") // "ru" | "en" | "uz"
+  language      String   @default("en") // "ru" | "en" | "uz"
   firstSeenAt   DateTime @default(now())
   paidTokens    Int      @default(0)
   freeScansUsed Int      @default(0)
   freeScansDate String   @default("")
+
+  @@schema("public")
 }

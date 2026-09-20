@@ -663,7 +663,7 @@ const uz: Translations = {
 const translations: Record<Lang, Translations> = { ru, en, uz };
 
 export function t(lang: Lang): Translations {
-  return translations[lang] ?? translations.ru;
+  return translations[lang] ?? translations.en;
 }
 
 export function isValidLang(value: string): value is Lang {
