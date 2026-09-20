@@ -150,11 +150,18 @@ function resetCountdown(lang: Lang): string {
   return t(lang).resetTimer(hours, minutes);
 }
 
-/** Форматирует дату в формате ДД.ММ.ГГГГ, одинаково для всех языков. */
+const TASHKENT_TZ = "Asia/Tashkent";
+
+/** Форматирует дату в формате ДД.ММ.ГГГГ по ташкентскому времени, одинаково для всех языков. */
 function formatDate(date: Date): string {
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${day}.${month}.${date.getFullYear()}`;
+  const parts = new Intl.DateTimeFormat("ru-RU", {
+    timeZone: TASHKENT_TZ,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("day")}.${get("month")}.${get("year")}`;
 }
 
 /**
@@ -243,6 +250,7 @@ async function historyScreen(userId: number, lang: Lang): Promise<string> {
     const emoji = verdictEmoji[scan.verdict as keyof typeof verdictEmoji] ?? "•";
     const typeIcon = scan.kind === "url" ? "🔗" : "📄";
     const date = scan.createdAt.toLocaleString("ru-RU", {
+      timeZone: TASHKENT_TZ,
       day: "2-digit",
       month: "2-digit",
       hour: "2-digit",

@@ -10,9 +10,9 @@ export interface TokenPackage {
 
 /** Пакеты токенов на продажу. Цена в Telegram Stars (⭐). */
 export const TOKEN_PACKAGES: TokenPackage[] = [
-  { tokens: 10, stars: 50 },
-  { tokens: 50, stars: 200 },
-  { tokens: 150, stars: 500 },
+  { tokens: 10, stars: 49 },
+  { tokens: 50, stars: 199 },
+  { tokens: 150, stars: 499 },
 ];
 
 function todayUtcString(): string {
