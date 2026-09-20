@@ -1,7 +1,7 @@
 {
   "name": "tg-antivirus-bot",
   "version": "1.0.0",
-  "description": "Telegram-бот для проверки PDF/APK файлов на угрозы через VirusTotal",
+  "description": "Guardix — Telegram-бот для проверки PDF/APK файлов на угрозы",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

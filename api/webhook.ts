@@ -17,7 +17,7 @@ const handleUpdate = webhookCallback(bot, "next-js", { secretToken });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
-    res.status(200).send("sufix-bot webhook: OK");
+    res.status(200).send("Guardix webhook: OK");
     return;
   }
 

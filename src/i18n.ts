@@ -19,7 +19,7 @@ export const LANGUAGE_NAMES: Record<Lang, string> = {
  *       🌐 язык · 💡 помощь · ⏳ ожидание · 🟢🟡🔴 вердикт
  */
 
-export const BRAND = "SUFIX ANTIVIRUS";
+export const BRAND = "GUARDIX";
 
 export type VerdictKind = "clean" | "suspicious" | "malicious";
 
@@ -134,7 +134,7 @@ interface Translations {
 // ────────────────────────────────────────────────────────────────
 
 const ru: Translations = {
-  heroTagline: "Проверка PDF и APK через 70+ антивирусов VirusTotal",
+  heroTagline: "Проверка PDF и APK через 70+ антивирусных движков",
   heroBody: (maxSizeMb) =>
     "<blockquote>Отправьте файл в чат как <b>документ</b> — проверю его " +
     "примерно 70 антивирусными движками и пришлю вердикт.</blockquote>\n\n" +
@@ -150,7 +150,7 @@ const ru: Translations = {
   navHelp: "💡 Помощь",
   navMenu: "‹ Меню",
   navBuy: "Купить токены",
-  navReport: "Полный отчёт VirusTotal",
+  navReport: "Подробный отчёт",
   navRetry: "Отправить другой файл",
 
   help:
@@ -227,11 +227,11 @@ const ru: Translations = {
     "<blockquote>Проверяю только <b>PDF</b> и <b>APK</b>. Отправьте файл в одном из этих форматов как документ.</blockquote>",
   tooLarge: (sizeMb, maxMb) =>
     "📄 <b>ФАЙЛ СЛИШКОМ БОЛЬШОЙ</b>\n\n" +
-    `<blockquote>Размер файла — <b>${sizeMb} МБ</b>, а предел бесплатного VirusTotal API — <b>${maxMb} МБ</b>.</blockquote>`,
+    `<blockquote>Размер файла — <b>${sizeMb} МБ</b>, а лимит на проверку — <b>${maxMb} МБ</b>.</blockquote>`,
   scanningTitle: "⏳ <b>ПРОВЕРЯЮ ФАЙЛ</b>",
   steps: {
     download: "Загружаю файл из Telegram",
-    search: "Ищу файл в базе VirusTotal",
+    search: "Ищу файл в базе данных",
     analyze: "Сканирую ~70 антивирусами",
   },
   scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache }) => {
@@ -250,12 +250,12 @@ const ru: Translations = {
       `${fileType}   ·   ${fileSize}\n\n` +
       `Детекты: <b>${detected} / ${total}</b>\n` +
       `<code>${meter}</code>` +
-      (fromCache ? "\n\n<i>💾 Результат из базы VirusTotal — файл проверяли ранее.</i>" : "")
+      (fromCache ? "\n\n<i>💾 Результат из базы — файл проверяли ранее.</i>" : "")
     );
   },
   error:
     "🔴 <b>НЕ УДАЛОСЬ ПРОВЕРИТЬ</b>\n\n" +
-    "<blockquote>Что-то пошло не так на стороне VirusTotal или сети. Попробуйте отправить файл ещё раз через минуту.</blockquote>",
+    "<blockquote>Что-то пошло не так при проверке или в сети. Попробуйте отправить файл ещё раз через минуту.</blockquote>",
   nonDocument:
     "📄 <b>ОТПРАВЬТЕ ФАЙЛ</b>\n\n" +
     "<blockquote>Пришлите PDF или APK <b>как документ</b> (скрепка → Файл), и я запущу проверку.</blockquote>",
@@ -278,7 +278,7 @@ const ru: Translations = {
 // ────────────────────────────────────────────────────────────────
 
 const en: Translations = {
-  heroTagline: "Scan PDF and APK files with 70+ VirusTotal antivirus engines",
+  heroTagline: "Scan PDF and APK files with 70+ antivirus engines",
   heroBody: (maxSizeMb) =>
     "<blockquote>Send a file to the chat as a <b>document</b> — I'll run it " +
     "through ~70 antivirus engines and return a verdict.</blockquote>\n\n" +
@@ -293,7 +293,7 @@ const en: Translations = {
   navHelp: "💡 Help",
   navMenu: "‹ Menu",
   navBuy: "Buy tokens",
-  navReport: "Full VirusTotal report",
+  navReport: "Detailed report",
   navRetry: "Send another file",
 
   help:
@@ -371,11 +371,11 @@ const en: Translations = {
     "<blockquote>I only scan <b>PDF</b> and <b>APK</b>. Send a file in one of these formats as a document.</blockquote>",
   tooLarge: (sizeMb, maxMb) =>
     "📄 <b>FILE TOO LARGE</b>\n\n" +
-    `<blockquote>The file is <b>${sizeMb} MB</b>, but the free VirusTotal API limit is <b>${maxMb} MB</b>.</blockquote>`,
+    `<blockquote>The file is <b>${sizeMb} MB</b>, but the scan limit is <b>${maxMb} MB</b>.</blockquote>`,
   scanningTitle: "⏳ <b>SCANNING FILE</b>",
   steps: {
     download: "Downloading file from Telegram",
-    search: "Looking it up in VirusTotal",
+    search: "Looking it up in the database",
     analyze: "Scanning with ~70 engines",
   },
   scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache }) => {
@@ -394,12 +394,12 @@ const en: Translations = {
       `${fileType}   ·   ${fileSize}\n\n` +
       `Detections: <b>${detected} / ${total}</b>\n` +
       `<code>${meter}</code>` +
-      (fromCache ? "\n\n<i>💾 Result from VirusTotal's database — this file was scanned before.</i>" : "")
+      (fromCache ? "\n\n<i>💾 Result from our database — this file was scanned before.</i>" : "")
     );
   },
   error:
     "🔴 <b>SCAN FAILED</b>\n\n" +
-    "<blockquote>Something went wrong on VirusTotal's side or the network. Try sending the file again in a minute.</blockquote>",
+    "<blockquote>Something went wrong during the scan or the network. Try sending the file again in a minute.</blockquote>",
   nonDocument:
     "📄 <b>SEND A FILE</b>\n\n" +
     "<blockquote>Send a PDF or APK <b>as a document</b> (attach → File) and I'll start the scan.</blockquote>",
@@ -422,7 +422,7 @@ const en: Translations = {
 // ────────────────────────────────────────────────────────────────
 
 const uz: Translations = {
-  heroTagline: "PDF va APK fayllarni 70+ VirusTotal antivirusi bilan tekshirish",
+  heroTagline: "PDF va APK fayllarni 70+ antivirus dvigateli bilan tekshirish",
   heroBody: (maxSizeMb) =>
     "<blockquote>Faylni chatga <b>hujjat</b> sifatida yuboring — uni ~70 ta " +
     "antivirus bilan tekshirib, xulosa qaytaraman.</blockquote>\n\n" +
@@ -437,7 +437,7 @@ const uz: Translations = {
   navHelp: "💡 Yordam",
   navMenu: "‹ Menyu",
   navBuy: "Token sotib olish",
-  navReport: "To'liq VirusTotal hisoboti",
+  navReport: "Batafsil hisobot",
   navRetry: "Boshqa fayl yuborish",
 
   help:
@@ -515,11 +515,11 @@ const uz: Translations = {
     "<blockquote>Men faqat <b>PDF</b> va <b>APK</b> ni tekshiraman. Faylni shu formatlardan birida hujjat sifatida yuboring.</blockquote>",
   tooLarge: (sizeMb, maxMb) =>
     "📄 <b>FAYL JUDA KATTA</b>\n\n" +
-    `<blockquote>Fayl hajmi — <b>${sizeMb} MB</b>, bepul VirusTotal API chegarasi esa <b>${maxMb} MB</b>.</blockquote>`,
+    `<blockquote>Fayl hajmi — <b>${sizeMb} MB</b>, tekshiruv chegarasi esa <b>${maxMb} MB</b>.</blockquote>`,
   scanningTitle: "⏳ <b>FAYL TEKSHIRILMOQDA</b>",
   steps: {
     download: "Fayl Telegramdan yuklab olinmoqda",
-    search: "VirusTotal bazasidan qidirilmoqda",
+    search: "Bazadan qidirilmoqda",
     analyze: "~70 antivirus bilan skanerlanmoqda",
   },
   scanResult: ({ kind, fileName, fileType, fileSize, detected, total, meter, fromCache }) => {
@@ -538,12 +538,12 @@ const uz: Translations = {
       `${fileType}   ·   ${fileSize}\n\n` +
       `Aniqlanishlar: <b>${detected} / ${total}</b>\n` +
       `<code>${meter}</code>` +
-      (fromCache ? "\n\n<i>💾 Natija VirusTotal bazasidan — fayl avval tekshirilgan.</i>" : "")
+      (fromCache ? "\n\n<i>💾 Natija bazadan — fayl avval tekshirilgan.</i>" : "")
     );
   },
   error:
     "🔴 <b>TEKSHIRIB BO'LMADI</b>\n\n" +
-    "<blockquote>VirusTotal yoki tarmoq tomonida nimadir noto'g'ri ketdi. Bir daqiqadan so'ng faylni qayta yuboring.</blockquote>",
+    "<blockquote>Tekshiruv yoki tarmoq tomonida nimadir noto'g'ri ketdi. Bir daqiqadan so'ng faylni qayta yuboring.</blockquote>",
   nonDocument:
     "📄 <b>FAYL YUBORING</b>\n\n" +
     "<blockquote>PDF yoki APK ni <b>hujjat</b> sifatida yuboring (biriktirish → Fayl), men tekshiruvni boshlayman.</blockquote>",
