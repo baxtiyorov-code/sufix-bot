@@ -31,6 +31,25 @@ const MAX_FILE_SIZE_MB = 32; // ограничение бесплатного Vi
 
 const HTML = { parse_mode: "HTML" } as const;
 
+/** Фирменная подпись — добавляется снизу каждого сообщения бота. */
+const FOOTER = "\n\n<i>GUARDIX — by Elvo Studio</i>";
+
+function withFooter(text: string): string {
+  return `${text}${FOOTER}`;
+}
+
+/** Отправляет новое сообщение с подписью снизу. */
+function reply(ctx: Context, text: string, keyboard?: InlineKeyboard) {
+  return ctx.reply(withFooter(text), { ...HTML, reply_markup: keyboard });
+}
+
+/** Редактирует сообщение бота (по ID) с подписью снизу; ошибки редактирования игнорируются. */
+function editMessage(ctx: Context, messageId: number, text: string, keyboard?: InlineKeyboard) {
+  return ctx.api
+    .editMessageText(ctx.chat!.id, messageId, withFooter(text), { ...HTML, reply_markup: keyboard })
+    .catch(() => {});
+}
+
 /** Экранирует спецсимволы HTML, чтобы имя файла не ломало разметку сообщения. */
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -145,9 +164,9 @@ function formatDate(date: Date): string {
 async function showScreen(ctx: Context, text: string, keyboard?: InlineKeyboard): Promise<void> {
   const options = { ...HTML, reply_markup: keyboard };
   if (ctx.callbackQuery) {
-    await ctx.editMessageText(text, options).catch(() => {});
+    await ctx.editMessageText(withFooter(text), options).catch(() => {});
   } else {
-    await ctx.reply(text, options);
+    await ctx.reply(withFooter(text), options);
   }
 }
 
@@ -264,39 +283,39 @@ bot.command(["start", "menu"], sendMenu);
 
 bot.command("help", async (ctx) => {
   const lang = await getUserLang(ctx.from!.id);
-  await ctx.reply(t(lang).help, { ...HTML, reply_markup: backKeyboard(lang) });
+  await reply(ctx, t(lang).help, backKeyboard(lang));
 });
 
 bot.command("language", async (ctx) => {
   const lang = await getUserLang(ctx.from!.id);
-  await ctx.reply(t(lang).languagePrompt, { ...HTML, reply_markup: languageKeyboard(lang) });
+  await reply(ctx, t(lang).languagePrompt, languageKeyboard(lang));
 });
 
 bot.command("profile", async (ctx) => {
   const lang = await getUserLang(ctx.from!.id);
-  await ctx.reply(await profileScreen(ctx.from!, lang), { ...HTML, reply_markup: backKeyboard(lang) });
+  await reply(ctx, await profileScreen(ctx.from!, lang), backKeyboard(lang));
 });
 
 bot.command("balance", async (ctx) => {
   const lang = await getUserLang(ctx.from!.id);
-  await ctx.reply(await balanceScreen(ctx.from!.id, lang), { ...HTML, reply_markup: balanceKeyboard(lang) });
+  await reply(ctx, await balanceScreen(ctx.from!.id, lang), balanceKeyboard(lang));
 });
 
 bot.command("buy", async (ctx) => {
   const lang = await getUserLang(ctx.from!.id);
-  await ctx.reply(t(lang).buyTitle, { ...HTML, reply_markup: buyKeyboard(lang) });
+  await reply(ctx, t(lang).buyTitle, buyKeyboard(lang));
 });
 
 bot.command("history", async (ctx) => {
   const lang = await getUserLang(ctx.from!.id);
-  await ctx.reply(await historyScreen(ctx.from!.id, lang), { ...HTML, reply_markup: backKeyboard(lang) });
+  await reply(ctx, await historyScreen(ctx.from!.id, lang), backKeyboard(lang));
 });
 
 bot.command("stats", async (ctx) => {
   const lang = await getUserLang(ctx.from!.id);
 
   if (!isAdmin(ctx.from?.id, ctx.from?.username)) {
-    await ctx.reply(t(lang).statsDenied, HTML);
+    await reply(ctx, t(lang).statsDenied);
     return;
   }
 
@@ -308,10 +327,7 @@ bot.command("stats", async (ctx) => {
     prisma.scan.findMany({ distinct: ["userId"], select: { userId: true } }),
   ]);
 
-  await ctx.reply(
-    t(lang).statsTitle({ total, clean, suspicious, malicious, users: uniqueUsers.length }),
-    { ...HTML, reply_markup: backKeyboard(lang) }
-  );
+  await reply(ctx, t(lang).statsTitle({ total, clean, suspicious, malicious, users: uniqueUsers.length }), backKeyboard(lang));
 });
 
 // ─────────────────────────────────────────────────────────
@@ -406,7 +422,7 @@ bot.on("message:successful_payment", async (ctx) => {
   }
 
   const lang = await getUserLang(ctx.from!.id);
-  await ctx.reply(t(lang).paymentSuccess(tokens), { ...HTML, reply_markup: backKeyboard(lang) });
+  await reply(ctx, t(lang).paymentSuccess(tokens), backKeyboard(lang));
 });
 
 // ─────────────────────────────────────────────────────────
@@ -424,15 +440,12 @@ bot.on("message:document", async (ctx) => {
   const fileExt = "." + (fileName.split(".").pop()?.toLowerCase() ?? "");
 
   if (!ALLOWED_EXTENSIONS.includes(fileExt)) {
-    await ctx.reply(s.unsupportedExt, { ...HTML, reply_markup: backKeyboard(lang) });
+    await reply(ctx, s.unsupportedExt, backKeyboard(lang));
     return;
   }
 
   if (fileSizeMb > MAX_FILE_SIZE_MB) {
-    await ctx.reply(s.tooLarge(fileSizeMb.toFixed(1), MAX_FILE_SIZE_MB), {
-      ...HTML,
-      reply_markup: backKeyboard(lang),
-    });
+    await reply(ctx, s.tooLarge(fileSizeMb.toFixed(1), MAX_FILE_SIZE_MB), backKeyboard(lang));
     return;
   }
 
@@ -440,10 +453,7 @@ bot.on("message:document", async (ctx) => {
   if (!isAdmin(ctx.from!.id, ctx.from!.username)) {
     const tokenResult = await consumeToken(BigInt(ctx.from!.id));
     if (!tokenResult.allowed) {
-      await ctx.reply(s.limitReached(FREE_DAILY_LIMIT, resetCountdown(lang)), {
-        ...HTML,
-        reply_markup: balanceKeyboard(lang),
-      });
+      await reply(ctx, s.limitReached(FREE_DAILY_LIMIT, resetCountdown(lang)), balanceKeyboard(lang));
       return;
     }
   }
@@ -457,12 +467,9 @@ bot.on("message:document", async (ctx) => {
     `${fileTypeLabel}   ·   ${sizeStr}\n\n` +
     `<code>${progressBar(step)}</code>  ${label}`;
 
-  const statusMsg = await ctx.reply(scanScreen(1, s.steps.download), HTML);
+  const statusMsg = await reply(ctx, scanScreen(1, s.steps.download));
 
-  const updateStatus = (text: string) =>
-    ctx.api
-      .editMessageText(ctx.chat.id, statusMsg.message_id, text, HTML)
-      .catch(() => {});
+  const updateStatus = (text: string) => editMessage(ctx, statusMsg.message_id, text);
 
   try {
     const file = await ctx.api.getFile(doc.file_id);
@@ -504,12 +511,7 @@ bot.on("message:document", async (ctx) => {
       fromCache,
     });
 
-    const keyboard = backKeyboard(lang);
-
-    await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, messageText, {
-      ...HTML,
-      reply_markup: keyboard,
-    });
+    await editMessage(ctx, statusMsg.message_id, messageText, backKeyboard(lang));
 
     await prisma.scan.create({
       data: {
@@ -531,12 +533,7 @@ bot.on("message:document", async (ctx) => {
     });
   } catch (error) {
     console.error(error);
-    await ctx.api
-      .editMessageText(ctx.chat.id, statusMsg.message_id, s.error, {
-        ...HTML,
-        reply_markup: backKeyboard(lang),
-      })
-      .catch(() => {});
+    await editMessage(ctx, statusMsg.message_id, s.error, backKeyboard(lang));
   }
 });
 
@@ -556,10 +553,7 @@ bot.on("message:text", async (ctx, next) => {
 
   // Защита от спам-сообщений с кучей ссылок: не сканируем ни одной.
   if (urls.length > MAX_LINKS_IN_MESSAGE) {
-    await ctx.reply(s.tooManyLinks(urls.length, MAX_LINKS_IN_MESSAGE), {
-      ...HTML,
-      reply_markup: backKeyboard(lang),
-    });
+    await reply(ctx, s.tooManyLinks(urls.length, MAX_LINKS_IN_MESSAGE), backKeyboard(lang));
     return;
   }
 
@@ -571,10 +565,7 @@ bot.on("message:text", async (ctx, next) => {
   if (!isAdmin(ctx.from!.id, ctx.from!.username)) {
     const tokenResult = await consumeToken(BigInt(ctx.from!.id));
     if (!tokenResult.allowed) {
-      await ctx.reply(s.limitReached(FREE_DAILY_LIMIT, resetCountdown(lang)), {
-        ...HTML,
-        reply_markup: balanceKeyboard(lang),
-      });
+      await reply(ctx, s.limitReached(FREE_DAILY_LIMIT, resetCountdown(lang)), balanceKeyboard(lang));
       return;
     }
   }
@@ -585,12 +576,9 @@ bot.on("message:text", async (ctx, next) => {
     (extraLinks > 0 ? `<i>${s.multipleLinksNotice(extraLinks)}</i>\n\n` : "") +
     `<code>${progressBar(step, 2)}</code>  ${label}`;
 
-  const statusMsg = await ctx.reply(scanScreen(1, s.steps.search), HTML);
+  const statusMsg = await reply(ctx, scanScreen(1, s.steps.search));
 
-  const updateStatus = (text: string) =>
-    ctx.api
-      .editMessageText(ctx.chat.id, statusMsg.message_id, text, HTML)
-      .catch(() => {});
+  const updateStatus = (text: string) => editMessage(ctx, statusMsg.message_id, text);
 
   try {
     let result = await getUrlReport(url, VT_API_KEY!);
@@ -637,12 +625,7 @@ bot.on("message:text", async (ctx, next) => {
       safeBrowsing,
     });
 
-    const keyboard = backKeyboard(lang);
-
-    await ctx.api.editMessageText(ctx.chat.id, statusMsg.message_id, messageText, {
-      ...HTML,
-      reply_markup: keyboard,
-    });
+    await editMessage(ctx, statusMsg.message_id, messageText, backKeyboard(lang));
 
     await prisma.scan.create({
       data: {
@@ -664,19 +647,14 @@ bot.on("message:text", async (ctx, next) => {
     });
   } catch (error) {
     console.error(error);
-    await ctx.api
-      .editMessageText(ctx.chat.id, statusMsg.message_id, s.error, {
-        ...HTML,
-        reply_markup: backKeyboard(lang),
-      })
-      .catch(() => {});
+    await editMessage(ctx, statusMsg.message_id, s.error, backKeyboard(lang));
   }
 });
 
 bot.on("message", async (ctx) => {
   if (!ctx.message.document) {
     const lang = await getUserLang(ctx.from!.id);
-    await ctx.reply(t(lang).nonDocument, { ...HTML, reply_markup: backKeyboard(lang) });
+    await reply(ctx, t(lang).nonDocument, backKeyboard(lang));
   }
 });
 
