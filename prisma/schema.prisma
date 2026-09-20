@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // DATABASE_URL — пуллер соединений (Supabase: порт 6543), для рантайма.
+  url       = env("DATABASE_URL")
+  // DIRECT_URL — прямое соединение (Supabase: порт 5432), только для миграций.
+  directUrl = env("DIRECT_URL")
 }
 
 model Scan {
