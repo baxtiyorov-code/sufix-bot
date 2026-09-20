@@ -662,12 +662,21 @@ bot.catch((err) => {
   console.error("Ошибка бота:", err);
 });
 
-/** Регистрирует локализованное меню команд и кнопку-меню в интерфейсе Telegram. */
+/** Регистрирует локализованное меню команд, About/Description и кнопку-меню в интерфейсе Telegram. */
 export async function configureBotProfile(): Promise<void> {
   const langs: Lang[] = ["ru", "en", "uz"];
+
   await bot.api.setMyCommands(t("en").menuCommands);
+  await bot.api.setMyDescription(t("en").botDescription);
+  await bot.api.setMyShortDescription(t("en").botShortDescription);
+
   await Promise.all(
-    langs.map((l) => bot.api.setMyCommands(t(l).menuCommands, { language_code: l }))
+    langs.flatMap((l) => [
+      bot.api.setMyCommands(t(l).menuCommands, { language_code: l }),
+      bot.api.setMyDescription(t(l).botDescription, { language_code: l }),
+      bot.api.setMyShortDescription(t(l).botShortDescription, { language_code: l }),
+    ])
   );
+
   await bot.api.setChatMenuButton({ menu_button: { type: "commands" } });
 }

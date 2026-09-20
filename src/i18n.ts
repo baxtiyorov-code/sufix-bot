@@ -143,6 +143,11 @@ interface Translations {
 
   /** Пункты нативного меню команд Telegram. */
   menuCommands: MenuCommand[];
+
+  /** Текст на пустом экране чата, до первого /start (≤512 символов, plain text). */
+  botDescription: string;
+  /** About в профиле бота (≤120 символов, plain text). */
+  botShortDescription: string;
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -316,6 +321,13 @@ const ru: Translations = {
     { command: "language", description: "Сменить язык" },
     { command: "help", description: "Как пользоваться ботом" },
   ],
+
+  botShortDescription: "Проверка файлов и ссылок на угрозы — 70+ антивирусов + Google Safe Browsing.",
+  botDescription:
+    "🛡 Guardix проверяет PDF, APK файлы и ссылки на вирусы и фишинг — через 70+ антивирусных движков и Google Safe Browsing.\n\n" +
+    "Просто отправьте файл или ссылку — получите вердикт за секунды.\n\n" +
+    "3 бесплатные проверки в день, больше — через токены (Telegram Stars).\n\n" +
+    "by Elvo Studio",
 };
 
 // ────────────────────────────────────────────────────────────────
@@ -487,6 +499,13 @@ const en: Translations = {
     { command: "language", description: "Change language" },
     { command: "help", description: "How to use the bot" },
   ],
+
+  botShortDescription: "Scan files and links for threats — 70+ antivirus engines + Google Safe Browsing.",
+  botDescription:
+    "🛡 Guardix checks PDF, APK files and links for malware and phishing — using 70+ antivirus engines and Google Safe Browsing.\n\n" +
+    "Just send a file or a link — get a verdict in seconds.\n\n" +
+    "3 free scans a day, more via tokens (Telegram Stars).\n\n" +
+    "by Elvo Studio",
 };
 
 // ────────────────────────────────────────────────────────────────
@@ -658,6 +677,13 @@ const uz: Translations = {
     { command: "language", description: "Tilni o'zgartirish" },
     { command: "help", description: "Botdan qanday foydalanish" },
   ],
+
+  botShortDescription: "Fayllar va havolalarni tekshirish — 70+ antivirus + Google Safe Browsing.",
+  botDescription:
+    "🛡 Guardix PDF, APK fayllarni va havolalarni virus va fishingga tekshiradi — 70+ antivirus dvigateli va Google Safe Browsing orqali.\n\n" +
+    "Fayl yoki havola yuboring — bir necha soniyada xulosa oling.\n\n" +
+    "Kuniga 3 ta bepul tekshiruv, ko'proq — tokenlar orqali (Telegram Stars).\n\n" +
+    "by Elvo Studio",
 };
 
 const translations: Record<Lang, Translations> = { ru, en, uz };
