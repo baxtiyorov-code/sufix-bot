@@ -113,6 +113,11 @@ interface Translations {
   adminBlockedToast: string;
   adminUnblockedToast: string;
   adminTokensAddedToast: (amount: number) => string;
+  /** Сообщение самому пользователю о начислении токенов админом. */
+  userTokensReceived: (amount: number) => string;
+  /** Сообщение самому пользователю о блокировке/разблокировке. */
+  userBlockedNotice: string;
+  userUnblockedNotice: string;
 
   profile: (params: {
     name: string;
@@ -259,6 +264,9 @@ const ru: Translations = {
   adminBlockedToast: "Заблокирован ✓",
   adminUnblockedToast: "Разблокирован ✓",
   adminTokensAddedToast: (amount) => `+${amount} токенов ✓`,
+  userTokensReceived: (amount) => `🎁 Администратор начислил вам <b>${amount}</b> токенов!`,
+  userBlockedNotice: "🚫 Ваш доступ к боту ограничен администратором.",
+  userUnblockedNotice: "✅ Ваш доступ к боту восстановлен администратором.",
 
   profile: ({ name, username, userId, language, memberSince, total, clean, suspicious, malicious, isAdmin, freeRemaining, dailyLimit, paidTokens, resetIn }) =>
     "👤 <b>ПРОФИЛЬ</b>\n\n" +
@@ -466,6 +474,9 @@ const en: Translations = {
   adminBlockedToast: "Blocked ✓",
   adminUnblockedToast: "Unblocked ✓",
   adminTokensAddedToast: (amount) => `+${amount} tokens ✓`,
+  userTokensReceived: (amount) => `🎁 The admin credited you <b>${amount}</b> tokens!`,
+  userBlockedNotice: "🚫 Your access to the bot has been restricted by the admin.",
+  userUnblockedNotice: "✅ Your access to the bot has been restored by the admin.",
 
   profile: ({ name, username, userId, language, memberSince, total, clean, suspicious, malicious, isAdmin, freeRemaining, dailyLimit, paidTokens, resetIn }) =>
     "👤 <b>PROFILE</b>\n\n" +
@@ -671,6 +682,9 @@ const uz: Translations = {
   adminBlockedToast: "Bloklandi ✓",
   adminUnblockedToast: "Blokdan chiqarildi ✓",
   adminTokensAddedToast: (amount) => `+${amount} token ✓`,
+  userTokensReceived: (amount) => `🎁 Administrator sizga <b>${amount}</b> token berdi!`,
+  userBlockedNotice: "🚫 Botga kirishingiz administrator tomonidan cheklandi.",
+  userUnblockedNotice: "✅ Botga kirishingiz administrator tomonidan tiklandi.",
 
   profile: ({ name, username, userId, language, memberSince, total, clean, suspicious, malicious, isAdmin, freeRemaining, dailyLimit, paidTokens, resetIn }) =>
     "👤 <b>PROFIL</b>\n\n" +

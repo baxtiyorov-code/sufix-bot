@@ -510,6 +510,12 @@ bot.callbackQuery(/^au:tok:(\d+):(\d+):(\d+)$/, async (ctx) => {
 
   await addPaidTokens(userId, amount);
   await ctx.answerCallbackQuery({ text: t(lang).adminTokensAddedToast(amount) });
+
+  const targetLang = await getUserLang(Number(userId));
+  await bot.api
+    .sendMessage(userId.toString(), withFooter(t(targetLang).userTokensReceived(amount)), HTML)
+    .catch(() => {});
+
   const { text, keyboard } = await adminUserCardScreen(userId, page, lang);
   await showScreen(ctx, text, keyboard);
 });
@@ -525,7 +531,15 @@ bot.callbackQuery(/^au:block:(\d+):(\d+)$/, async (ctx) => {
     await prisma.userSettings.update({ where: { userId }, data: { blocked: !settings.blocked } });
   }
 
+  const nowBlocked = !settings?.blocked;
   await ctx.answerCallbackQuery({ text: settings?.blocked ? t(lang).adminUnblockedToast : t(lang).adminBlockedToast });
+
+  if (settings) {
+    const targetLang = await getUserLang(Number(userId));
+    const notice = nowBlocked ? t(targetLang).userBlockedNotice : t(targetLang).userUnblockedNotice;
+    await bot.api.sendMessage(userId.toString(), withFooter(notice), HTML).catch(() => {});
+  }
+
   const { text, keyboard } = await adminUserCardScreen(userId, page, lang);
   await showScreen(ctx, text, keyboard);
 });
