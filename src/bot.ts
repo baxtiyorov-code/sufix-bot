@@ -6,7 +6,7 @@ import { checkSafeBrowsing } from "./safebrowsing";
 import { prisma } from "./db";
 import { t, Lang, BRAND, LANGUAGE_NAMES, isValidLang } from "./i18n";
 import { consumeToken, addPaidTokens, getBalance, timeUntilReset, FREE_DAILY_LIMIT, TOKEN_PACKAGES } from "./tokens";
-import { isAdmin } from "./admins";
+import { isAdmin, ADMIN_NOTIFY_CHAT_IDS } from "./admins";
 
 /**
  * Здесь живёт вся логика бота — команды, кнопки, сканирование файлов.
@@ -262,18 +262,46 @@ async function historyScreen(userId: number, lang: Lang): Promise<string> {
   return `${s.historyTitle}\n\n${rows.join("\n\n")}`;
 }
 
+/** Уведомляет админов о новом пользователе бота. */
+async function notifyAdminsNewUser(from: NonNullable<Context["from"]>): Promise<void> {
+  const name = [from.first_name, from.last_name].filter(Boolean).join(" ");
+  const text =
+    "🆕 <b>Новый пользователь</b>\n\n" +
+    `Имя: <b>${escapeHtml(name || "—")}</b>\n` +
+    (from.username ? `Ник: @${from.username}\n` : "Ник: <i>не указан</i>\n") +
+    `ID: <code>${from.id}</code>`;
+
+  await Promise.all(
+    ADMIN_NOTIFY_CHAT_IDS.map((chatId) =>
+      bot.api.sendMessage(chatId, text, HTML).catch(() => {})
+    )
+  );
+}
+
 // Отслеживаем каждого пользователя: создаём запись при первом обращении,
 // обновляем username, если он изменился.
 bot.use(async (ctx, next) => {
   if (ctx.from) {
-    await prisma.userSettings.upsert({
+    const existing = await prisma.userSettings.findUnique({
       where: { userId: BigInt(ctx.from.id) },
-      update: { username: ctx.from.username ?? null },
-      create: {
-        userId: BigInt(ctx.from.id),
-        username: ctx.from.username ?? null,
-      },
     });
+
+    if (existing) {
+      if (existing.username !== (ctx.from.username ?? null)) {
+        await prisma.userSettings.update({
+          where: { userId: BigInt(ctx.from.id) },
+          data: { username: ctx.from.username ?? null },
+        });
+      }
+    } else {
+      await prisma.userSettings.create({
+        data: {
+          userId: BigInt(ctx.from.id),
+          username: ctx.from.username ?? null,
+        },
+      });
+      await notifyAdminsNewUser(ctx.from);
+    }
   }
   await next();
 });

@@ -27,3 +27,6 @@ export function isAdmin(userId: number | undefined, username?: string | null): b
   if (username && adminUsernames.has(username.toLowerCase())) return true;
   return false;
 }
+
+/** Chat ID администраторов, которым можно писать напрямую (из ADMIN_CHAT_ID). */
+export const ADMIN_NOTIFY_CHAT_IDS = [...adminIds];
