@@ -294,11 +294,12 @@ bot.use(async (ctx, next) => {
     });
 
     if (existing) {
+      const lang = (existing.language as Lang) ?? "en";
       if (existing.blocked && !isAdmin(ctx.from.id, ctx.from.username)) {
         if (ctx.callbackQuery) {
-          await ctx.answerCallbackQuery({ text: "🚫 Доступ ограничен", show_alert: true }).catch(() => {});
+          await ctx.answerCallbackQuery({ text: t(lang).userBlockedNotice, show_alert: true }).catch(() => {});
         } else {
-          await ctx.reply("🚫 Доступ к боту ограничен.").catch(() => {});
+          await ctx.reply(t(lang).userBlockedNotice).catch(() => {});
         }
         return;
       }
@@ -309,10 +310,12 @@ bot.use(async (ctx, next) => {
         });
       }
     } else {
+      const detectedLang = isValidLang(ctx.from.language_code ?? "") ? (ctx.from.language_code as Lang) : "en";
       await prisma.userSettings.create({
         data: {
           userId: BigInt(ctx.from.id),
           username: ctx.from.username ?? null,
+          language: detectedLang,
         },
       });
       await notifyAdminsNewUser(ctx.from);
