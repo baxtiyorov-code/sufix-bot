@@ -47,6 +47,7 @@ model UserSettings {
   paidTokens    Int      @default(0)
   freeScansUsed Int      @default(0)
   freeScansDate String   @default("")
+  blocked       Boolean  @default(false)
 
   @@schema("public")
 }
