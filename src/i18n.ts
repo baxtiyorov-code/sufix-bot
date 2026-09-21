@@ -86,6 +86,34 @@ interface Translations {
     users: number;
   }) => string;
 
+  // ─── Админка (пользователи, токены, блокировка) ───
+  adminMenuButton: string;
+  adminNewUserTitle: string;
+  adminFieldName: string;
+  adminNewUserNoNick: string;
+  adminManageButton: string;
+  adminUsersTitle: string;
+  adminUsersSummary: (total: number, page: number, totalPages: number) => string;
+  adminBackToList: string;
+  adminPrevPage: string;
+  adminNextPage: string;
+  adminUserCardTitle: string;
+  adminUserNotFound: string;
+  adminFieldNick: string;
+  adminNoNick: string;
+  adminFieldId: string;
+  adminFieldLanguage: string;
+  adminFieldScans: string;
+  adminFieldTokens: string;
+  adminFieldStatus: string;
+  adminStatusBlocked: string;
+  adminStatusActive: string;
+  adminBlockButton: string;
+  adminUnblockButton: string;
+  adminBlockedToast: string;
+  adminUnblockedToast: string;
+  adminTokensAddedToast: (amount: number) => string;
+
   profile: (params: {
     name: string;
     username: string | null;
@@ -204,6 +232,33 @@ const ru: Translations = {
     `🟡 Подозрительных: <b>${suspicious}</b>\n` +
     `🔴 Опасных: <b>${malicious}</b>\n\n` +
     `👥 Уникальных пользователей: <b>${users}</b>`,
+
+  adminMenuButton: "👑 Админка",
+  adminNewUserTitle: "🆕 Новый пользователь",
+  adminFieldName: "Имя",
+  adminNewUserNoNick: "Ник: <i>не указан</i>",
+  adminManageButton: "⚙️ Управление",
+  adminUsersTitle: "👑 <b>ПОЛЬЗОВАТЕЛИ</b>",
+  adminUsersSummary: (total, page, totalPages) => `Всего: <b>${total}</b> · Страница ${page}/${totalPages}`,
+  adminBackToList: "‹ К списку",
+  adminPrevPage: "‹ Назад",
+  adminNextPage: "Вперёд ›",
+  adminUserCardTitle: "⚙️ <b>ПОЛЬЗОВАТЕЛЬ</b>",
+  adminUserNotFound: "Пользователь не найден.",
+  adminFieldNick: "Ник",
+  adminNoNick: "не указан",
+  adminFieldId: "ID",
+  adminFieldLanguage: "Язык",
+  adminFieldScans: "Проверок",
+  adminFieldTokens: "Токены",
+  adminFieldStatus: "Статус",
+  adminStatusBlocked: "🚫 Заблокирован",
+  adminStatusActive: "✅ Активен",
+  adminBlockButton: "🚫 Заблокировать",
+  adminUnblockButton: "✅ Разблокировать",
+  adminBlockedToast: "Заблокирован ✓",
+  adminUnblockedToast: "Разблокирован ✓",
+  adminTokensAddedToast: (amount) => `+${amount} токенов ✓`,
 
   profile: ({ name, username, userId, language, memberSince, total, clean, suspicious, malicious, isAdmin, freeRemaining, dailyLimit, paidTokens, resetIn }) =>
     "👤 <b>ПРОФИЛЬ</b>\n\n" +
@@ -385,6 +440,33 @@ const en: Translations = {
     `🔴 Malicious: <b>${malicious}</b>\n\n` +
     `👥 Unique users: <b>${users}</b>`,
 
+  adminMenuButton: "👑 Admin",
+  adminNewUserTitle: "🆕 New user",
+  adminFieldName: "Name",
+  adminNewUserNoNick: "Username: <i>not set</i>",
+  adminManageButton: "⚙️ Manage",
+  adminUsersTitle: "👑 <b>USERS</b>",
+  adminUsersSummary: (total, page, totalPages) => `Total: <b>${total}</b> · Page ${page}/${totalPages}`,
+  adminBackToList: "‹ Back to list",
+  adminPrevPage: "‹ Prev",
+  adminNextPage: "Next ›",
+  adminUserCardTitle: "⚙️ <b>USER</b>",
+  adminUserNotFound: "User not found.",
+  adminFieldNick: "Username",
+  adminNoNick: "not set",
+  adminFieldId: "ID",
+  adminFieldLanguage: "Language",
+  adminFieldScans: "Scans",
+  adminFieldTokens: "Tokens",
+  adminFieldStatus: "Status",
+  adminStatusBlocked: "🚫 Blocked",
+  adminStatusActive: "✅ Active",
+  adminBlockButton: "🚫 Block",
+  adminUnblockButton: "✅ Unblock",
+  adminBlockedToast: "Blocked ✓",
+  adminUnblockedToast: "Unblocked ✓",
+  adminTokensAddedToast: (amount) => `+${amount} tokens ✓`,
+
   profile: ({ name, username, userId, language, memberSince, total, clean, suspicious, malicious, isAdmin, freeRemaining, dailyLimit, paidTokens, resetIn }) =>
     "👤 <b>PROFILE</b>\n\n" +
     (isAdmin ? "<blockquote>👑 Bot administrator</blockquote>\n\n" : "") +
@@ -562,6 +644,33 @@ const uz: Translations = {
     `🟡 Shubhali: <b>${suspicious}</b>\n` +
     `🔴 Xavfli: <b>${malicious}</b>\n\n` +
     `👥 Noyob foydalanuvchilar: <b>${users}</b>`,
+
+  adminMenuButton: "👑 Admin",
+  adminNewUserTitle: "🆕 Yangi foydalanuvchi",
+  adminFieldName: "Ism",
+  adminNewUserNoNick: "Username: <i>ko'rsatilmagan</i>",
+  adminManageButton: "⚙️ Boshqarish",
+  adminUsersTitle: "👑 <b>FOYDALANUVCHILAR</b>",
+  adminUsersSummary: (total, page, totalPages) => `Jami: <b>${total}</b> · ${page}/${totalPages}-sahifa`,
+  adminBackToList: "‹ Ro'yxatga",
+  adminPrevPage: "‹ Orqaga",
+  adminNextPage: "Keyingi ›",
+  adminUserCardTitle: "⚙️ <b>FOYDALANUVCHI</b>",
+  adminUserNotFound: "Foydalanuvchi topilmadi.",
+  adminFieldNick: "Username",
+  adminNoNick: "ko'rsatilmagan",
+  adminFieldId: "ID",
+  adminFieldLanguage: "Til",
+  adminFieldScans: "Tekshiruvlar",
+  adminFieldTokens: "Tokenlar",
+  adminFieldStatus: "Holat",
+  adminStatusBlocked: "🚫 Bloklangan",
+  adminStatusActive: "✅ Faol",
+  adminBlockButton: "🚫 Bloklash",
+  adminUnblockButton: "✅ Blokdan chiqarish",
+  adminBlockedToast: "Bloklandi ✓",
+  adminUnblockedToast: "Blokdan chiqarildi ✓",
+  adminTokensAddedToast: (amount) => `+${amount} token ✓`,
 
   profile: ({ name, username, userId, language, memberSince, total, clean, suspicious, malicious, isAdmin, freeRemaining, dailyLimit, paidTokens, resetIn }) =>
     "👤 <b>PROFIL</b>\n\n" +

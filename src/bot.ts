@@ -101,7 +101,7 @@ function menuKeyboard(lang: Lang, isAdminUser = false): InlineKeyboard {
     .text(s.navLanguage, "nav:language")
     .text(s.navHelp, "nav:help");
   if (isAdminUser) {
-    kb.row().text("👑 Админка", "au:list:0");
+    kb.row().text(s.adminMenuButton, "au:list:0");
   }
   return kb;
 }
@@ -266,20 +266,22 @@ async function historyScreen(userId: number, lang: Lang): Promise<string> {
   return `${s.historyTitle}\n\n${rows.join("\n\n")}`;
 }
 
-/** Уведомляет админов о новом пользователе бота. */
+/** Уведомляет админов о новом пользователе бота — каждого на его собственном языке. */
 async function notifyAdminsNewUser(from: NonNullable<Context["from"]>): Promise<void> {
   const name = [from.first_name, from.last_name].filter(Boolean).join(" ");
-  const text =
-    "🆕 <b>Новый пользователь</b>\n\n" +
-    `Имя: <b>${escapeHtml(name || "—")}</b>\n` +
-    (from.username ? `Ник: @${from.username}\n` : "Ник: <i>не указан</i>\n") +
-    `ID: <code>${from.id}</code>`;
-  const keyboard = new InlineKeyboard().text("⚙️ Управление", `au:view:${from.id}:0`);
 
   await Promise.all(
-    ADMIN_NOTIFY_CHAT_IDS.map((chatId) =>
-      bot.api.sendMessage(chatId, text, { ...HTML, reply_markup: keyboard }).catch(() => {})
-    )
+    ADMIN_NOTIFY_CHAT_IDS.map(async (chatId) => {
+      const lang = await getUserLang(Number(chatId));
+      const s = t(lang);
+      const text =
+        `${s.adminNewUserTitle}\n\n` +
+        `${s.adminFieldName}: <b>${escapeHtml(name || "—")}</b>\n` +
+        (from.username ? `${s.adminFieldNick}: @${from.username}\n` : `${s.adminNewUserNoNick}\n`) +
+        `${s.adminFieldId}: <code>${from.id}</code>`;
+      const kb = new InlineKeyboard().text(s.adminManageButton, `au:view:${from.id}:0`);
+      await bot.api.sendMessage(chatId, text, { ...HTML, reply_markup: kb }).catch(() => {});
+    })
   );
 }
 
@@ -390,11 +392,16 @@ const ADMIN_TOKEN_PRESETS = TOKEN_PACKAGES.map((pkg) => pkg.tokens); // [10, 50,
 /** true — доступ разрешён; иначе сама отвечает на callback и возвращает false. */
 async function requireAdminCallback(ctx: Context): Promise<boolean> {
   if (isAdmin(ctx.from?.id, ctx.from?.username)) return true;
-  await ctx.answerCallbackQuery({ text: "⛔ Доступ запрещён", show_alert: true }).catch(() => {});
+  const lang = ctx.from ? await getUserLang(ctx.from.id) : "en";
+  await ctx.answerCallbackQuery({ text: t(lang).statsDenied, show_alert: true }).catch(() => {});
   return false;
 }
 
-async function adminUsersListScreen(page: number): Promise<{ text: string; keyboard: InlineKeyboard }> {
+async function adminUsersListScreen(
+  page: number,
+  lang: Lang
+): Promise<{ text: string; keyboard: InlineKeyboard }> {
+  const s = t(lang);
   const total = await prisma.userSettings.count();
   const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
   const safePage = Math.min(Math.max(0, page), totalPages - 1);
@@ -405,9 +412,7 @@ async function adminUsersListScreen(page: number): Promise<{ text: string; keybo
     take: ADMIN_PAGE_SIZE,
   });
 
-  const text =
-    "👑 <b>ПОЛЬЗОВАТЕЛИ</b>\n\n" +
-    `Всего: <b>${total}</b> · Страница ${safePage + 1}/${totalPages}`;
+  const text = `${s.adminUsersTitle}\n\n${s.adminUsersSummary(total, safePage + 1, totalPages)}`;
 
   const kb = new InlineKeyboard();
   for (const u of users) {
@@ -416,19 +421,21 @@ async function adminUsersListScreen(page: number): Promise<{ text: string; keybo
   }
 
   if (totalPages > 1) {
-    if (safePage > 0) kb.text("‹ Назад", `au:list:${safePage - 1}`);
-    if (safePage < totalPages - 1) kb.text("Вперёд ›", `au:list:${safePage + 1}`);
+    if (safePage > 0) kb.text(s.adminPrevPage, `au:list:${safePage - 1}`);
+    if (safePage < totalPages - 1) kb.text(s.adminNextPage, `au:list:${safePage + 1}`);
     kb.row();
   }
-  kb.text("‹ Меню", "nav:menu");
+  kb.text(s.navMenu, "nav:menu");
 
   return { text, keyboard: kb };
 }
 
 async function adminUserCardScreen(
   userId: bigint,
-  page: number
+  page: number,
+  lang: Lang
 ): Promise<{ text: string; keyboard: InlineKeyboard }> {
+  const s = t(lang);
   const [settings, scans] = await Promise.all([
     prisma.userSettings.findUnique({ where: { userId } }),
     prisma.scan.count({ where: { userId } }),
@@ -438,74 +445,78 @@ async function adminUserCardScreen(
 
   if (!settings) {
     return {
-      text: "Пользователь не найден.",
-      keyboard: kb.text("‹ К списку", `au:list:${page}`),
+      text: s.adminUserNotFound,
+      keyboard: kb.text(s.adminBackToList, `au:list:${page}`),
     };
   }
 
   const text =
-    "⚙️ <b>ПОЛЬЗОВАТЕЛЬ</b>\n\n" +
-    (settings.username ? `Ник: @${settings.username}\n` : "Ник: <i>не указан</i>\n") +
-    `ID: <code>${settings.userId}</code>\n` +
-    `Язык: <b>${settings.language}</b>\n` +
-    `Проверок: <b>${scans}</b>\n` +
-    `Токены: <b>${settings.paidTokens}</b>\n` +
-    `Статус: ${settings.blocked ? "🚫 <b>Заблокирован</b>" : "✅ <b>Активен</b>"}`;
+    `${s.adminUserCardTitle}\n\n` +
+    (settings.username ? `${s.adminFieldNick}: @${settings.username}\n` : `${s.adminFieldNick}: <i>${s.adminNoNick}</i>\n`) +
+    `${s.adminFieldId}: <code>${settings.userId}</code>\n` +
+    `${s.adminFieldLanguage}: <b>${settings.language}</b>\n` +
+    `${s.adminFieldScans}: <b>${scans}</b>\n` +
+    `${s.adminFieldTokens}: <b>${settings.paidTokens}</b>\n` +
+    `${s.adminFieldStatus}: ${settings.blocked ? `<b>${s.adminStatusBlocked}</b>` : `<b>${s.adminStatusActive}</b>`}`;
 
   for (const amount of ADMIN_TOKEN_PRESETS) {
     kb.text(`➕${amount}`, `au:tok:${userId}:${amount}:${page}`);
   }
   kb.row();
   kb.text(
-    settings.blocked ? "✅ Разблокировать" : "🚫 Заблокировать",
+    settings.blocked ? s.adminUnblockButton : s.adminBlockButton,
     `au:block:${userId}:${page}`
   ).row();
-  kb.text("‹ К списку", `au:list:${page}`);
+  kb.text(s.adminBackToList, `au:list:${page}`);
 
   return { text, keyboard: kb };
 }
 
 bot.command("users", async (ctx) => {
+  const lang = await getUserLang(ctx.from!.id);
   if (!isAdmin(ctx.from?.id, ctx.from?.username)) {
-    const lang = await getUserLang(ctx.from!.id);
     await reply(ctx, t(lang).statsDenied);
     return;
   }
-  const { text, keyboard } = await adminUsersListScreen(0);
+  const { text, keyboard } = await adminUsersListScreen(0, lang);
   await reply(ctx, text, keyboard);
 });
 
 bot.callbackQuery(/^au:list:(\d+)$/, async (ctx) => {
   if (!(await requireAdminCallback(ctx))) return;
+  const lang = await getUserLang(ctx.from.id);
   const page = parseInt(ctx.match[1], 10);
   await ctx.answerCallbackQuery();
-  const { text, keyboard } = await adminUsersListScreen(page);
+  const { text, keyboard } = await adminUsersListScreen(page, lang);
   await showScreen(ctx, text, keyboard);
 });
 
 bot.callbackQuery(/^au:view:(\d+):(\d+)$/, async (ctx) => {
   if (!(await requireAdminCallback(ctx))) return;
+  const lang = await getUserLang(ctx.from.id);
   const userId = BigInt(ctx.match[1]);
   const page = parseInt(ctx.match[2], 10);
   await ctx.answerCallbackQuery();
-  const { text, keyboard } = await adminUserCardScreen(userId, page);
+  const { text, keyboard } = await adminUserCardScreen(userId, page, lang);
   await showScreen(ctx, text, keyboard);
 });
 
 bot.callbackQuery(/^au:tok:(\d+):(\d+):(\d+)$/, async (ctx) => {
   if (!(await requireAdminCallback(ctx))) return;
+  const lang = await getUserLang(ctx.from.id);
   const userId = BigInt(ctx.match[1]);
   const amount = parseInt(ctx.match[2], 10);
   const page = parseInt(ctx.match[3], 10);
 
   await addPaidTokens(userId, amount);
-  await ctx.answerCallbackQuery({ text: `+${amount} токенов ✓` });
-  const { text, keyboard } = await adminUserCardScreen(userId, page);
+  await ctx.answerCallbackQuery({ text: t(lang).adminTokensAddedToast(amount) });
+  const { text, keyboard } = await adminUserCardScreen(userId, page, lang);
   await showScreen(ctx, text, keyboard);
 });
 
 bot.callbackQuery(/^au:block:(\d+):(\d+)$/, async (ctx) => {
   if (!(await requireAdminCallback(ctx))) return;
+  const lang = await getUserLang(ctx.from.id);
   const userId = BigInt(ctx.match[1]);
   const page = parseInt(ctx.match[2], 10);
 
@@ -514,8 +525,8 @@ bot.callbackQuery(/^au:block:(\d+):(\d+)$/, async (ctx) => {
     await prisma.userSettings.update({ where: { userId }, data: { blocked: !settings.blocked } });
   }
 
-  await ctx.answerCallbackQuery({ text: settings?.blocked ? "Разблокирован ✓" : "Заблокирован ✓" });
-  const { text, keyboard } = await adminUserCardScreen(userId, page);
+  await ctx.answerCallbackQuery({ text: settings?.blocked ? t(lang).adminUnblockedToast : t(lang).adminBlockedToast });
+  const { text, keyboard } = await adminUserCardScreen(userId, page, lang);
   await showScreen(ctx, text, keyboard);
 });
 
